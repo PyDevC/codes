@@ -1,8 +1,8 @@
 !/usr/bin/env bash
 
-# single  file
+#create single empty file
 touch file
-# multiple files
+#create multiple empty files
 touch file1 file2
 
 # adding text to file

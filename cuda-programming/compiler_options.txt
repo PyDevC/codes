@@ -1,4 +1,0 @@
-XLA
-LLVM
-MLIR
-NVCC

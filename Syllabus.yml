@@ -3,3 +3,15 @@ Python:
     builtin
     functools
     collections
+DataStructues:
+  arrays:
+    basic:
+      traversal
+    sorting:
+      merge sort
+      bubble sort
+      insertion sort
+      selection sort
+      quick sort
+      count sort
+      radix sort

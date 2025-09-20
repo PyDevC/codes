@@ -1,1 +1,1 @@
-local source = 10
+local a = 10 function end return source 

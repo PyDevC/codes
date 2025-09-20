@@ -3,3 +3,4 @@
 gcc main.c lexer.c -o lexer
 ./lexer testing.lua
 echo $?
+rm ./lexer

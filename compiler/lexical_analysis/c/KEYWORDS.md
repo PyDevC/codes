@@ -1,0 +1,9 @@
+function
+local
+end
+do
+while
+for
+if
+then
+return

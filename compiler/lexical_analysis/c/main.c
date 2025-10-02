@@ -2,7 +2,7 @@
 #include <stdio.h>
 
 int main(void) {
-  char *source_code[] = {"local", "a", "=", "210"};
+  char *source_code[] = {"local", "a", "=", "\"This is\""};
   SToken *TokenList = Tokenizer(source_code);
   int i;
   for (i = 0; i < 4; i++) {

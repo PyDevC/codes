@@ -1,9 +1,1 @@
-function
-local
-end
-do
-while
-for
-if
-then
-return
+"and", "break", "do", "else", "elseif", "end", "false", "for", "function", "if", "in", "local", "nil", "not", "or", "repeat", "return", "then", "true", "until", "while"

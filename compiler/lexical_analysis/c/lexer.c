@@ -64,8 +64,11 @@ SToken ReadTokenType(char *tokenchars) {
     }
 
     // Match for Keywords
-    char *keyword_array[] = {"function", "end", "return", "local", "do",
-                             "while",    "for", "if",     "then"};
+    char *keyword_array[] = {
+        "and", "break",    "do",     "else", "elseif", "end",   "false",
+        "for", "function", "if",     "in",   "local",  "nil",   "not",
+        "or",  "repeat",   "return", "then", "true",   "until", "while"};
+
     char *keyword;
     int idx;
 
@@ -78,10 +81,10 @@ SToken ReadTokenType(char *tokenchars) {
     }
 
     // REGEX match for String literal
-    reti = regcomp(&regex, "^[0-9,a-z,A-Z]+$", 0);
+    reti = regcomp(&regex, "^\"[^\"]*\"$", REG_EXTENDED);
     reti = regexec(&regex, tokenchars, 0, NULL, 0);
     if (reti) {
-      stoken.Tokentype = LITERAL;
+      stoken.Tokentype = LITERALSTRING;
     }
     // Match rules for variable name
   }

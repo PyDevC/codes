@@ -53,6 +53,16 @@ SToken ReadTokenType(char *tokenchars) {
       break;
     };
   } else {
+
+    // REGEX match for literal
+    regex_t regex;
+    int reti;
+    reti = regcomp(&regex, "^[0-9]+$", 0);
+    reti = regexec(&regex, tokenchars, 0, NULL, 0);
+    if (reti) {
+      stoken.Tokentype = LITERAL;
+    }
+
     // Match for Keywords
     char *keyword_array[] = {"function", "end", "return", "local", "do",
                              "while",    "for", "if",     "then"};
@@ -63,10 +73,16 @@ SToken ReadTokenType(char *tokenchars) {
       keyword = keyword_array[idx];
       if (strcmp(tokenchars, keyword) == 0) {
         stoken.Tokentype = KEYWORD;
+        break;
       }
     }
-    // REGEX match for literal
+
     // REGEX match for String literal
+    reti = regcomp(&regex, "^[0-9,a-z,A-Z]+$", 0);
+    reti = regexec(&regex, tokenchars, 0, NULL, 0);
+    if (reti) {
+      stoken.Tokentype = LITERAL;
+    }
     // Match rules for variable name
   }
   return stoken;

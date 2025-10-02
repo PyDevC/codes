@@ -3,7 +3,7 @@
 
 typedef enum {
   // Special Characters
-  LPAREN,
+  LPAREN, // 1
   RPAREN,
   LBRAC,
   RBRAC,
@@ -20,7 +20,7 @@ typedef enum {
   LITERAL,
   LITERALSTRING,
   // Adding Illegal for everyother character that doesn't match anything above
-  ILLEGAL
+  ILLEGAL // 15
 } Token;
 
 typedef struct SToken {

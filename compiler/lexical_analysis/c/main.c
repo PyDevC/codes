@@ -1,3 +1,4 @@
+#include "lexer.h"
 #include <stdio.h>
 #include <stdlib.h>
 
@@ -22,24 +23,29 @@ int main(int argc, char **argv) {
     if (readable(argv[1])) {
       ReaderF *mainfile = (ReaderF *)malloc(sizeof(ReaderF));
       if (mainfile == NULL)
-        return 1;
+        return EXIT_FAILURE;
       mainfile->f = fopen(argv[1], "r");
       mainfile->c = 0;
       mainfile->n = 0;
       char *reader = malloc(BUFSIZE * sizeof(char));
+      SToken *TokenList = (SToken *)malloc(BUFSIZE * sizeof(SToken));
+      int TokenListIdx = 0;
       if (reader == NULL)
-        return 1;
+        return EXIT_FAILURE;
       while (fgets(reader, BUFSIZE, mainfile->f) != NULL) {
+        Tokenizer(TokenList, TokenListIdx, reader);
         mainfile->n++;
-        printf("%s", reader);
       }
+      // Closing and freeing everything in main
       fclose(mainfile->f);
       free(reader);
       free(mainfile);
-      return 0;
+      free(TokenList);
+      return EXIT_SUCCESS;
     } else {
       perror("File does not exists");
-      return 1;
+      return EXIT_FAILURE;
     }
   }
+  return EXIT_FAILURE;
 }

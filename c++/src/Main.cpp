@@ -1,9 +1,9 @@
+#include "Log.h"
 #include <iostream>
 
-void Log(const char *message) { std::cout << message << std::endl; }
-
 int main() {
-  std::cout << "Hello, World!" << std::endl;
-  std::cin.get();
+  Log("Hello, World!");
+  int output = Multiply(10, 200);
+  std::cout << output << std::endl;
   return 0;
 }

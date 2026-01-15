@@ -1,7 +1,6 @@
-#ifndef LOG_H
-#define LOG_H
+#pragma once
 
 void Log(const char* message);
-int Multiply(int a, int b);
+void InitLog();
 
-#endif // LOG_H
+struct Player {};

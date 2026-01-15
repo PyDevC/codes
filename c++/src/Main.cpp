@@ -1,9 +1,14 @@
-#include "Log.h"
 #include <iostream>
+#include "Log.h"
+
+using namespace std;
+
+void Log(const char* message){
+    cout << message << endl;
+}
 
 int main() {
-  Log("Hello, World!");
-  int output = Multiply(10, 200);
-  std::cout << output << std::endl;
+    InitLog();
+    Log("Hey!");
   return 0;
 }

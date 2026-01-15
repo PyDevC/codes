@@ -1,0 +1,3 @@
+/home/pydevc/personal/codes/algo/c++/build/CMakeFiles/Solid.dir
+/home/pydevc/personal/codes/algo/c++/build/CMakeFiles/edit_cache.dir
+/home/pydevc/personal/codes/algo/c++/build/CMakeFiles/rebuild_cache.dir

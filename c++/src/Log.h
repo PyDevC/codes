@@ -1,6 +1,4 @@
 #pragma once
+#include <iostream>
 
-void Log(const char* message);
-void InitLog();
-
-struct Player {};
+#define Log(x) std::cout << x << std::endl;

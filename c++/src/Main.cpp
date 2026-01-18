@@ -1,34 +1,40 @@
-#include "Log.h"
-#include <memory.h>
-
+#include <iostream>
 using namespace std;
 
-class Log {
+class Entity {
+public:
+  virtual std::string GetName() { return "Entity"; }
+  float X, Y;
+  void Move(float xa, float ya) {
+    X += xa;
+    Y += ya;
+  }
+
+  void Print() { cout << "X: " << X << "\nY: " << Y << endl; }
+};
+
+class Player : public Entity {
 private:
-  int m_LogLevel;
+  std::string m_Name;
 
 public:
-  enum { ERROR, WARN, TRACE } Levels;
-  void SetLevel(int level) { m_LogLevel = level; }
-  void Warn(const char *message) {
-    if (m_LogLevel >= WARN)
-      cout << "WARN: " << message << endl;
-  }
-  void Trace(const char *message) {
-    if (m_LogLevel >= TRACE)
-      cout << "TRACE: " << message << endl;
-  }
-  void Error(const char *message) {
-    if (m_LogLevel >= ERROR)
-      cout << "ERROR: " << message << endl;
+  float speed;
+  Player(const std::string &name) : m_Name(name) {}
+  std::string GetName() override { return m_Name; }
+  void Move(float xa, float ya) {
+    X += (xa * speed);
+    Y += (ya * speed);
   }
 };
 
+void PrintName(Entity *entity) { cout << entity->GetName() << endl; }
+
 int main(void) {
-  Log log;
-  log.SetLevel(log.TRACE);
-  log.Warn("This is warning");
-  log.Error("This is error");
-  log.Trace("This is tracing");
+
+  Entity *e = new Entity();
+  PrintName(e);
+  Player *p = new Player("Player");
+  cout << p->GetName() << endl;
+  PrintName(p);
   return 0;
 }

@@ -15,6 +15,10 @@ struct Vector2 {
   Vector2 operator*(const Vector2 &other) const {
     return Vector2(x * other.x, y * other.y);
   }
+  bool operator==(const Vector2 &other) const {
+    return other.x == x && other.y == y;
+  }
+  bool operator!=(const Vector2 &other) const { return !(*this == other); }
 };
 
 std::ostream &operator<<(std::ostream &stream, const Vector2 &other) {
@@ -28,6 +32,10 @@ int main(void) {
   Vector2 result1 = position + speed;
   Vector2 result2 = position * speed;
   std::cout << result1 << std::endl;
-  std::cout << result2 << std::endl;
+  if (result1 == result2) {
+    std::cout << result2 << std::endl;
+  } else {
+    std::cout << "Not" << std::endl;
+  }
   return 0;
 }

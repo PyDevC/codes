@@ -19,6 +19,7 @@ public:
 };
 
 int main(void) {
+  std::weak_ptr<Entity> entity6;
   {
     std::unique_ptr<Entity> entity = std::make_unique<Entity>();
     std::shared_ptr<Entity> entity1 = std::make_shared<Entity>();
@@ -26,12 +27,15 @@ int main(void) {
     std::shared_ptr<Entity> entity3 = entity1;
     std::shared_ptr<Entity> entity4 = entity2;
     std::shared_ptr<Entity> entity5 = entity1;
+    entity6 = entity1;
     entity->Print();
     entity1->Print();
     entity2->Print();
     entity3->Print();
     entity4->Print();
     entity5->Print();
+    entity6.lock()->Print();
   }
+  std::cout << entity6.expired() << std::endl;
   return 0;
 }

@@ -1,28 +1,33 @@
 #include <iostream>
 
-using String = std::string;
-
-class Entity {
-private:
-  String m_Name;
-  int m_Age;
-
-public:
-  Entity() : m_Name("Unknown") {}
-  Entity(const String &name) : m_Name(name) {}
-  Entity(int age) : m_Age(age) {}
-  const String &GetName() const { return m_Name; }
-  int GetAge() const { return m_Age; }
+struct Vector2 {
+  float x, y;
+  Vector2(float x, float y) : x(x), y(y) {}
+  Vector2 Add(const Vector2 &other) const {
+    return Vector2(x + other.x, y + other.y);
+  }
+  Vector2 Multiply(const Vector2 &other) const {
+    return Vector2(x * other.x, y * other.y);
+  }
+  Vector2 operator+(const Vector2 &other) const {
+    return Vector2(x + other.x, y + other.y);
+  }
+  Vector2 operator*(const Vector2 &other) const {
+    return Vector2(x * other.x, y * other.y);
+  }
 };
 
-void PrintEntity(const Entity &entity) {
-  std::cout << entity.GetName() << std::endl;
-  std::cout << entity.GetAge() << std::endl;
+std::ostream &operator<<(std::ostream &stream, const Vector2 &other) {
+  stream << other.x << ", " << other.y;
+  return stream;
 }
 
 int main(void) {
-  Entity e = Entity("Entity");
-  PrintEntity(e);
-  PrintEntity(11);
+  Vector2 position(4.0f, 5.0f);
+  Vector2 speed(4.0f, 5.0f);
+  Vector2 result1 = position + speed;
+  Vector2 result2 = position * speed;
+  std::cout << result1 << std::endl;
+  std::cout << result2 << std::endl;
   return 0;
 }

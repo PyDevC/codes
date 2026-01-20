@@ -1,36 +1,30 @@
-#include <cstring>
 #include <iostream>
+#include <vector>
 
-class String {
-private:
-  char *m_Buffer;
-  unsigned int m_Size;
-
-public:
-  String(const char *string) {
-    m_Size = strlen(string);
-    m_Buffer = new char[m_Size + 1];
-    std::memcpy(m_Buffer, string, m_Size);
-  }
-  String(const String &other) : m_Size(other.m_Size) {
-    m_Buffer = new char[m_Size + 1];
-    std::memcpy(m_Buffer, other.m_Buffer, m_Size + 1);
-  }
-  ~String() { delete m_Buffer; }
-  char &operator[](const int index) { return m_Buffer[index]; }
-  friend std::ostream &operator<<(std::ostream &stream, const String &string);
+struct Vertex {
+  float x, y, z;
 };
 
-std::ostream &operator<<(std::ostream &stream, const String &string) {
-  stream << string.m_Buffer;
+std::ostream &operator<<(std::ostream &stream, const Vertex &vertex) {
+  stream << vertex.x << ", " << vertex.y << ", " << vertex.z;
   return stream;
 }
 
 int main(void) {
-  String string = "Cherno";
-  String second = string;
-  second[4] = 'a';
-  std::cout << string << std::endl;
-  std::cout << second << std::endl;
+  Vertex *vertex = new Vertex[5];
+  vertex[0].x = 10;
+  vertex[0].y = 10;
+  vertex[0].z = 10;
+  std::cout << vertex[0] << std::endl;
+  std::vector<Vertex> vec1;
+  vec1.push_back({10, 10, 10});
+  vec1.push_back({11, 10, 10});
+  vec1.push_back({12, 10, 10});
+  vec1.push_back({13, 10, 10});
+  vec1.push_back({14, 10, 10});
+  vec1.erase(vec1.begin() + 1);
+  for (Vertex &v : vec1)
+    std::cout << v << std::endl;
+  vec1.clear();
   return 0;
 }

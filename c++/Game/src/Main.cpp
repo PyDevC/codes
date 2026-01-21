@@ -1,5 +1,7 @@
-namespace engine {
-void PrintMessage();
-}
+#include "../../Engine/src/Engine.h"
 
-int main() { engine::PrintMessage(); }
+int main(void) {
+  engine::Engine engine;
+  engine.EchoVectorSpaceCoordinates();
+  return 0;
+}

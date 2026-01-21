@@ -6,6 +6,5 @@ if [[ "$1" == "cmake" ]]; then
     cmake .. -G "Unix Makefiles" -DCMAKE_DEBUG_TYPE=Debug
 fi
 make
-bin/Solid
+bin/Game
 popd
-

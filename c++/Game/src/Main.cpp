@@ -1,12 +1,10 @@
 #include "../../Engine/src/Engine.h"
-template <typename T> void Print(T value) { std::cout << value << std::endl; }
 
+using namespace engine;
 int main(void) {
-  engine::Engine engine;
-  engine.EchoVectorSpaceCoordinates();
-  Print<int>(10);
-  Print<std::string>("Game Engine");
-  Print<float>(4.4f);
-  Print<double>(4.234);
+  Engine eng;
+  eng.EchoVectorSpaceCoordinates();
+  auto coord = eng.vs.GetVectorSpace();
+  std::cout << coord << std::endl;
   return 0;
 }

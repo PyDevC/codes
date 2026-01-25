@@ -20,5 +20,9 @@ int main(void) {
   delete derived;
   Base *poly = new Derived();
   delete poly;
+
+  double value = 4.55;
+  double s = static_cast<int>(value) + 5.3;
+  std::cout << s << std::endl;
   return 0;
 }

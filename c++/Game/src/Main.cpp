@@ -1,47 +1,24 @@
 #include <iostream>
 
-struct Workers {
-  enum {
-    MAGE,
-    ARCHER,
-    RAWHAMMER,
-  } type;
-  union {
-    struct {
-      float power;
-      float short_range_power;
-      float long_range_power;
-      float health;
-      char *weapon;
-      char *first_skill;
-      char *power_skill;
-      char *general_skill;
-    } mage;
+class Base {
+public:
+  Base() { std::cout << "Base Constructor\n"; }
+  virtual ~Base() { std::cout << "Base Destructor\n"; }
+};
 
-    struct {
-      float power;
-      float power_shot_range;
-      float number_arrow;
-      float shooting_range;
-      char *first_skill;
-      char *power_skill;
-      char *general_skill;
-    } archer;
-
-    struct {
-      float power;
-      float meele_power;
-      float weapon_efficiency;
-      float number_arrow;
-      float shooting_range;
-      char *first_skill;
-      char *power_skill;
-      char *general_skill;
-    } raw_hammer;
-  } player;
+class Derived : public Base {
+public:
+  Derived() { std::cout << "Derived Constructor\n"; }
+  ~Derived() { std::cout << "Derived Destructor\n"; }
 };
 
 int main(void) {
-  Workers worker1 = {.type = Workers::MAGE, .player = {.mage = {}}};
+  Base *base = new Base();
+  delete base;
+  std::cout << "----------------------------------\n";
+  Derived *derived = new Derived();
+  delete derived;
+  Base *poly = new Derived();
+  delete poly;
   return 0;
 }

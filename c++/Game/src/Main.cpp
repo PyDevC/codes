@@ -1,17 +1,19 @@
+#include <algorithm>
 #include <iostream>
-#include <stdlib.h>
+#include <vector>
 
 int main(void) {
-  int size = 2000;
-  int *array2 = new int[size * size * size];
-  for (int z = 0; z < size; z++) {
-    for (int y = 0; y < size; y++) {
-      for (int x = 0; x < size; x++) {
-        array2[x + y * size + z * size * size] = x * y;
-      }
+  // sorting
+  std::vector<int> v = {1, 23, 234234, 234, 234, 234, 23};
+  std::sort(v.begin(), v.end(), [](int a, int b) {
+    if (a >= 100) {
+      return a > b;
+    } else {
+      return a < b;
     }
+  });
+  for (int value : v) {
+    std::cout << value << std::endl;
   }
-
-  delete[] array2;
   return 0;
 }

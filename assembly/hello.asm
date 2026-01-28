@@ -1,19 +1,23 @@
 section .data
 msg db 'Hello, World!', 0Ah
-a db 'Anushk', 0Ah
 
 section .text
 global _start
 
 _start:
-    mov edx, 13 ;; Allocate 13 bytes to write Hello, World!
-    mov ecx, msg
-    mov ebx, 1
-    mov eax, 4
-    int 80h
+    mov ebx, msg
+    mov eax, ebx
 
-    mov edx, 6
-    mov ecx, a
+nextchar:
+    cmp byte [eax], 0
+    jz finished
+    inc eax
+    jmp nextchar
+
+finished:
+    sub eax, ebx
+    mov edx, eax
+    mov ecx, msg
     mov ebx, 1
     mov eax, 4
     int 80h

@@ -1,6 +1,7 @@
 #include "Lexer.h"
 #include <stdio.h>
 #include <string>
+#include <cctype>
 #include <cstring>
 #include <cstdlib>
 
@@ -92,9 +93,9 @@ static int gettok(){
     while (isspace(LastChar)){
         LastChar = getchar();
     }
-    if(isalpha(LastChar)){
+    if(std::isalpha(LastChar)){
         IdentifierStr = LastChar;
-        while(isalnum(LastChar)){
+        while(std::isalnum(LastChar)){
             IdentifierStr += LastChar;
             LastChar = getchar();
         }
@@ -105,6 +106,16 @@ static int gettok(){
         } else {
             return TOK_KEYWORD;
         }
+    } else if (std::isdigit(LastChar)){
+        std::string NumStr;
+        NumStr += LastChar;
+        while (std::isdigit(LastChar) || LastChar == '.'){
+            // TODO: make sure that it's only valid for onetime . not more than one
+            // Ex: 0.124 is right but 1.2.3 is wrong
+            NumStr += LastChar;
+        }
+        NumVal = std::strtod(NumStr.c_str(), NULL);
+        return TOK_NUMVAL;
     }
     return TOK_ILLEGAL;
 }

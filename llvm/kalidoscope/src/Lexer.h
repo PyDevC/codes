@@ -29,8 +29,13 @@ enum Keyword {
 };
 
 enum TokenType {
-    TOK_ILLEGAL,
-    TOK_KEYWORD,
+    TOK_ILLEGAL = -2,
+    TOK_EOF = -1,
+    TOK_KEYWORD = 0,
     TOK_IDENTIFIER,
     TOK_NUMVAL,
+    TOK_OPERATOR_ADD,
+    TOK_OPERATOR_SUB,
+    TOK_OPERATOR_MUL,
+    TOK_OPERATOR_DIV,
 };

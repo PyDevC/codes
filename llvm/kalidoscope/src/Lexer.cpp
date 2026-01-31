@@ -97,9 +97,20 @@ static double NumVal;
 
 static int gettok()
 {
+    // Why would you set it to whitespace first
     static int LastChar = ' ';
     while (isspace(LastChar)) {
         LastChar = getchar();
+    }
+    // Check for comment
+    // Now this lua supports # for comments rather than --
+    if (LastChar == '#') {
+        do {
+            LastChar = getchar();
+        } while (LastChar != EOF && LastChar != '\n' && LastChar != '\r');
+        if (LastChar != EOF) {
+            return gettok();
+        }
     }
     if (std::isalpha(LastChar)) {
         IdentifierStr = LastChar;
@@ -125,6 +136,26 @@ static int gettok()
         }
         NumVal = std::strtod(NumStr.c_str(), NULL);
         return TOK_NUMVAL;
+    } else if (LastChar == EOF) {
+        return TOK_EOF;
+    } else {
+        LastChar = getchar();
+        switch (LastChar) {
+        case '+': {
+            return TOK_OPERATOR_ADD;
+        } break;
+        case '-': {
+            return TOK_OPERATOR_SUB;
+        } break;
+        case '*': {
+            return TOK_OPERATOR_MUL;
+        } break;
+        case '/': {
+            return TOK_OPERATOR_DIV;
+        } break;
+        default: {
+        }
+        };
     }
     return TOK_ILLEGAL;
 }

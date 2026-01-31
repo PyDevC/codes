@@ -2,6 +2,10 @@
 
 #define LEXER_TOKEN_BUFFER 16 // 16 bytes
 
+#include <iostream>
+#include <stdio.h>
+#include <string>
+
 enum Keyword {
     KEYWORD_ILLEGAL,
     KEYWORD_AND,
@@ -38,4 +42,29 @@ enum TokenType {
     TOK_OPERATOR_SUB,
     TOK_OPERATOR_MUL,
     TOK_OPERATOR_DIV,
+    TOK_LPAREN,
+    TOK_RPAREN,
+    TOK_COMMA,
 };
+
+class Keywords
+{
+  public:
+    struct Mapping
+    {
+        const char *Keystring;
+        Keyword Keycode;
+    };
+
+    // Helper functions
+    Keyword KeywordToCode(const char *keystring, size_t len) const;
+    const char *KeywordToString(Keyword) const;
+
+  private:
+    static const Mapping m_Mappings[];
+    static const int m_Count;
+};
+
+static std::string IdentifierStr;
+static double NumVal;
+TokenType gettok();

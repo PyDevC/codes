@@ -2,26 +2,6 @@
 #include <cctype>
 #include <cstdlib>
 #include <cstring>
-#include <stdio.h>
-#include <string>
-
-class Keywords
-{
-  public:
-    struct Mapping
-    {
-        const char *Keystring;
-        Keyword Keycode;
-    };
-
-    // Helper functions
-    Keyword KeywordToCode(const char *keystring, size_t len) const;
-    const char *KeywordToString(Keyword) const;
-
-  private:
-    static const Mapping m_Mappings[];
-    static const int m_Count;
-};
 
 // Constant Array of Keywords in a sorted manner,
 // Strings are searched using bsearch
@@ -92,10 +72,7 @@ Keyword Keywords::KeywordToCode(const char *keystring, size_t len) const
     return map->Keycode;
 }
 
-static std::string IdentifierStr;
-static double NumVal;
-
-static int gettok()
+TokenType gettok()
 {
     // Why would you set it to whitespace first
     static int LastChar = ' ';

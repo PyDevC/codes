@@ -1,5 +1,6 @@
 #pragma once
 
+#include <map>
 #include <memory>
 #include <string>
 #include <vector>
@@ -54,52 +55,87 @@ class BinaryExprASTNode : public ExprASTNode
     std::unique_ptr<ExprASTNode> m_Left, m_Right;
 
   public:
-    BinaryExprASTNode(char Op, std::unique_ptr<ExprASTNode> Left, std::unique_ptr<ExprASTNode> Right) : m_Op(Op), m_Left(std::move(Left)), m_Right(std::move(Right)) {}
+    BinaryExprASTNode(char Op, std::unique_ptr<ExprASTNode> Left,
+                      std::unique_ptr<ExprASTNode> Right)
+        : m_Op(Op), m_Left(std::move(Left)), m_Right(std::move(Right))
+    {
+    }
     ~BinaryExprASTNode() override {}
 };
 
 class UnaryExprASTNode : public ExprASTNode
 {
-private:
+  private:
     char m_Op;
     std::unique_ptr<ExprASTNode> m_Right;
 
-public:
-    UnaryExprASTNode(char Op, std::unique_ptr<ExprASTNode> Right) : m_Op(Op), m_Right(std::move(Right)) {}
+  public:
+    UnaryExprASTNode(char Op, std::unique_ptr<ExprASTNode> Right)
+        : m_Op(Op), m_Right(std::move(Right))
+    {
+    }
     ~UnaryExprASTNode() override {}
 };
 
-class CallExprASTNode : public ExprASTNode {
-private:
+class CallExprASTNode : public ExprASTNode
+{
+  private:
     std::string m_Callee;
     std::vector<std::unique_ptr<ExprASTNode>> m_Args;
 
-public:
-    CallExprASTNode(const std::string Callee, std::vector<std::unique_ptr<ExprASTNode>> Args) : m_Callee(Callee), m_Args(std::move(Args)) {}
+  public:
+    CallExprASTNode(const std::string Callee,
+                    std::vector<std::unique_ptr<ExprASTNode>> Args)
+        : m_Callee(Callee), m_Args(std::move(Args))
+    {
+    }
     ~CallExprASTNode() override {}
 };
 
-class BlockASTNode : public ASTNode {
-private:
+class BlockASTNode : public ASTNode
+{
+  private:
     std::vector<ASTNode> m_StatementASTNode;
 };
 
-class PrototypeASTNode : public ASTNode {
-private:
+class PrototypeASTNode : public ASTNode
+{
+  private:
     std::string m_PrototypeName;
     std::vector<std::string> m_Args;
 
-public:
-    PrototypeASTNode(const std::string &Name, std::vector<std::string> Args) : m_PrototypeName(Name), m_Args(Args){}
+  public:
+    PrototypeASTNode(const std::string &Name, std::vector<std::string> Args)
+        : m_PrototypeName(Name), m_Args(Args)
+    {
+    }
     ~PrototypeASTNode() override {}
 };
 
-class FunctionASTNode : public ASTNode {
-private:
+class FunctionASTNode : public ASTNode
+{
+  private:
     std::unique_ptr<PrototypeASTNode> m_Prototype;
     std::unique_ptr<BlockASTNode> m_Block;
 
-public:
-    FunctionASTNode(std::unique_ptr<PrototypeASTNode> Prototype, std::unique_ptr<BlockASTNode> Block) : m_Prototype(std::move(Prototype)), m_Block(std::move(Block)){}
+  public:
+    FunctionASTNode(std::unique_ptr<PrototypeASTNode> Prototype,
+                    std::unique_ptr<BlockASTNode> Block)
+        : m_Prototype(std::move(Prototype)), m_Block(std::move(Block))
+    {
+    }
     ~FunctionASTNode() override {}
+};
+
+class Parser
+{
+  private:
+    std::unique_ptr<ASTNode> m_Root;
+
+  public:
+    std::unique_ptr<ExprASTNode> ParseNumberExpr();
+    std::unique_ptr<ExprASTNode> ParseParenExpr();
+    std::unique_ptr<ExprASTNode> ParseIdentifierExpr();
+    std::unique_ptr<ExprASTNode> ParsePrimaryExpr();
+    std::unique_ptr<ExprASTNode> ParseExpression();
 };

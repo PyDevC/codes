@@ -1,30 +1,32 @@
 #include "Lexer.h"
+#include <cctype>
+#include <cstdlib>
+#include <cstring>
 #include <stdio.h>
 #include <string>
-#include <cctype>
-#include <cstring>
-#include <cstdlib>
 
-
-class Keywords {
-public:
-    struct Mapping {
-        const char* Keystring;
+class Keywords
+{
+  public:
+    struct Mapping
+    {
+        const char *Keystring;
         Keyword Keycode;
     };
 
     // Helper functions
-    Keyword KeywordToCode(const char* keystring, size_t len) const;
-    const char* KeywordToString(Keyword) const;
+    Keyword KeywordToCode(const char *keystring, size_t len) const;
+    const char *KeywordToString(Keyword) const;
 
-private:
+  private:
     static const Mapping m_Mappings[];
     static const int m_Count;
 };
 
-// Constant Array of Keywords in a sorted manner, 
+// Constant Array of Keywords in a sorted manner,
 // Strings are searched using bsearch
-const Keywords::Mapping Keywords::m_Mappings[] {
+// clang-format off
+const Keywords::Mapping Keywords::m_Mappings[] = {
     {NULL, KEYWORD_ILLEGAL},
     {"and", KEYWORD_AND},
     {"break", KEYWORD_BREAK},
@@ -49,69 +51,76 @@ const Keywords::Mapping Keywords::m_Mappings[] {
     {"until", KEYWORD_UNTIL},
     {"while", KEYWORD_WHILE},
 };
+// clang-format on
 
+const int Keywords::m_Count =
+    (const int)(sizeof(Keywords::m_Mappings) / sizeof(Keywords::m_Mappings[0]));
 
-const int Keywords::m_Count = (const int)(sizeof(Keywords::m_Mappings)
-    / sizeof(Keywords::m_Mappings[0]));
-
-struct Keywords_search_keys{
-    const char* key;
+struct Keywords_search_keys
+{
+    const char *key;
     size_t size;
 };
 
-static int CompareKeywords(const void* keyv, const void* mapv){
-    const Keywords_search_keys* key = static_cast<const Keywords_search_keys*>(keyv);
-    const Keywords::Mapping* map = static_cast<const Keywords::Mapping*>(mapv);
-    if(map->Keystring == NULL){
+static int CompareKeywords(const void *keyv, const void *mapv)
+{
+    const Keywords_search_keys *key =
+        static_cast<const Keywords_search_keys *>(keyv);
+    const Keywords::Mapping *map = static_cast<const Keywords::Mapping *>(mapv);
+    if (map->Keystring == NULL) {
         return 1;
     }
     int i = strcmp(key->key, map->Keystring);
-    if(i != 0){
+    if (i != 0) {
         return 1;
     } else {
         return 0;
     }
 }
 
-Keyword Keywords::KeywordToCode(const char* keystring, size_t len) const {
+Keyword Keywords::KeywordToCode(const char *keystring, size_t len) const
+{
     Keywords_search_keys key;
     key.key = keystring;
     key.size = len;
-    void* mapv = std::bsearch(&key, this->m_Mappings, this->m_Count, sizeof(this->m_Mappings[0]), CompareKeywords);
-    if(mapv == NULL){
+    void *mapv = std::bsearch(&key, this->m_Mappings, this->m_Count,
+                              sizeof(this->m_Mappings[0]), CompareKeywords);
+    if (mapv == NULL) {
         return KEYWORD_ILLEGAL;
     }
-    Mapping* map = static_cast<Mapping*>(mapv);
+    Mapping *map = static_cast<Mapping *>(mapv);
     return map->Keycode;
 }
 
 static std::string IdentifierStr;
 static double NumVal;
 
-static int gettok(){
+static int gettok()
+{
     static int LastChar = ' ';
-    while (isspace(LastChar)){
+    while (isspace(LastChar)) {
         LastChar = getchar();
     }
-    if(std::isalpha(LastChar)){
+    if (std::isalpha(LastChar)) {
         IdentifierStr = LastChar;
-        while(std::isalnum(LastChar)){
+        while (std::isalnum(LastChar)) {
             IdentifierStr += LastChar;
             LastChar = getchar();
         }
         Keywords keywords;
-        Keyword keytoken = keywords.KeywordToCode(IdentifierStr.c_str(), IdentifierStr.size());
-        if(keytoken == KEYWORD_ILLEGAL){
+        Keyword keytoken =
+            keywords.KeywordToCode(IdentifierStr.c_str(), IdentifierStr.size());
+        if (keytoken == KEYWORD_ILLEGAL) {
             return TOK_IDENTIFIER;
         } else {
             return TOK_KEYWORD;
         }
-    } else if (std::isdigit(LastChar)){
+    } else if (std::isdigit(LastChar)) {
         std::string NumStr;
         NumStr += LastChar;
-        while (std::isdigit(LastChar) || LastChar == '.'){
-            // TODO: make sure that it's only valid for onetime . not more than one
-            // Ex: 0.124 is right but 1.2.3 is wrong
+        while (std::isdigit(LastChar) || LastChar == '.') {
+            // TODO: make sure that it's only valid for onetime . not more than
+            // one Ex: 0.124 is right but 1.2.3 is wrong
             NumStr += LastChar;
         }
         NumVal = std::strtod(NumStr.c_str(), NULL);
@@ -119,4 +128,3 @@ static int gettok(){
     }
     return TOK_ILLEGAL;
 }
-

@@ -2,7 +2,6 @@
 
 #define LEXER_TOKEN_BUFFER 16 // 16 bytes
 
-
 enum Keyword {
     KEYWORD_ILLEGAL,
     KEYWORD_AND,

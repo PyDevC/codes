@@ -3,6 +3,15 @@
 #include <cstdlib>
 #include <cstring>
 
+static int get_char_index = 0;
+static std::string output;
+static std::string IdentifierStr;
+static double NumVal;
+
+void setoutput(std::string out) { output = out; }
+std::string getIdentifierStr() { return IdentifierStr; }
+double getNumVal() { return NumVal; }
+
 // Constant Array of Keywords in a sorted manner,
 // Strings are searched using bsearch
 // clang-format off
@@ -72,18 +81,27 @@ Keyword Keywords::KeywordToCode(const char *keystring, size_t len) const
     return map->Keycode;
 }
 
+int getcharnow()
+{
+    if (get_char_index >= output.size()) {
+        return EOF;
+    }
+    get_char_index++;
+    return output[get_char_index - 1];
+}
+
 TokenType gettok()
 {
     // Why would you set it to whitespace first
-    static int LastChar = ' ';
+    static char LastChar = ' ';
     while (isspace(LastChar)) {
-        LastChar = getchar();
+        LastChar = getcharnow();
     }
     // Check for comment
     // Now this lua supports # for comments rather than --
     if (LastChar == '#') {
         do {
-            LastChar = getchar();
+            LastChar = getcharnow();
         } while (LastChar != EOF && LastChar != '\n' && LastChar != '\r');
         if (LastChar != EOF) {
             return gettok();
@@ -93,7 +111,7 @@ TokenType gettok()
         IdentifierStr = LastChar;
         while (std::isalnum(LastChar)) {
             IdentifierStr += LastChar;
-            LastChar = getchar();
+            LastChar = getcharnow();
         }
         Keywords keywords;
         Keyword keytoken =
@@ -116,7 +134,7 @@ TokenType gettok()
     } else if (LastChar == EOF) {
         return TOK_EOF;
     } else {
-        LastChar = getchar();
+        LastChar = getcharnow();
         switch (LastChar) {
         case '+': {
             return TOK_OPERATOR_ADD;

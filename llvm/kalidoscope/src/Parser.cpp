@@ -3,7 +3,7 @@
 #include <map>
 
 static int CurrentToken;
-static int GetNextToken() { return CurrentToken = gettok(); }
+static void GetNextToken() { CurrentToken = gettok(); }
 
 static std::map<char, int> BinaryOpPrecedence = {
     {'+', 1},
@@ -26,7 +26,7 @@ static int GetTokPrecedence()
 
 std::unique_ptr<ExprASTNode> Parser::ParseNumberExpr()
 {
-    auto Result = std::make_unique<NumberExprASTNode>(NumVal);
+    auto Result = std::make_unique<NumberExprASTNode>(getNumVal());
     GetNextToken(); // Consume Number
     return std::move(Result);
 }
@@ -49,7 +49,7 @@ std::unique_ptr<ExprASTNode> Parser::ParseParenExpr()
 
 std::unique_ptr<ExprASTNode> Parser::ParseIdentifierExpr()
 {
-    std::string IdentName = IdentifierStr;
+    std::string IdentName = getIdentifierStr();
     GetNextToken(); // Consume Identifier
     // Check for function call
     if (CurrentToken != TOK_LPAREN) {
@@ -60,7 +60,7 @@ std::unique_ptr<ExprASTNode> Parser::ParseIdentifierExpr()
         do {
             GetNextToken(); // Consume Lparen or Arg
             if (auto Arg = ParseExpression()) {
-                Args.push_back(Arg);
+                Args.push_back(std::move(Arg));
             } else {
                 return nullptr;
             }
@@ -96,6 +96,9 @@ std::unique_ptr<ExprASTNode> Parser::ParsePrimaryExpr()
     case TOK_LPAREN: {
         return ParseParenExpr();
     } break;
+    case EOF: {
+        return nullptr;
+    };
     default:
         std::cout << "Error: Token Unexpected.\n";
         exit(1);
@@ -134,6 +137,7 @@ ParseBinaryOpRight(int Precedence, std::unique_ptr<ExprASTNode> Left)
 
 std::unique_ptr<ExprASTNode> Parser::ParseExpression()
 {
+    GetNextToken();
     auto Left = ParsePrimaryExpr();
     if (!Left) {
         return nullptr;
@@ -146,23 +150,23 @@ std::unique_ptr<PrototypeASTNode> Parser::ParsePrototype()
     if (CurrentToken != TOK_IDENTIFIER) {
         return nullptr;
     }
-    std::string FunctionName = IdentifierStr;
+    std::string FunctionName = getIdentifierStr();
     GetNextToken(); // Consume Lparen
     if (CurrentToken != TOK_LPAREN) {
         return nullptr;
     }
     std::vector<std::string> Args;
-        do {
-            GetNextToken(); // Consume Lparen or Arg
-            if (CurrentToken == TOK_IDENTIFIER) {
-               Args.push_back(IdentifierStr);
-            }
-            GetNextToken(); // Consume Rparen or Comma
-            if (CurrentToken != TOK_COMMA && CurrentToken != TOK_RPAREN) {
-                std::cout << "Error: Expected ',' or ')' when passing function "
-                             "arguments in surrounded expressions.\n";
-                exit(1);
-            }
-        } while (CurrentToken != TOK_RPAREN);
+    do {
+        GetNextToken(); // Consume Lparen or Arg
+        if (CurrentToken == TOK_IDENTIFIER) {
+            Args.push_back(getIdentifierStr());
+        }
+        GetNextToken(); // Consume Rparen or Comma
+        if (CurrentToken != TOK_COMMA && CurrentToken != TOK_RPAREN) {
+            std::cout << "Error: Expected ',' or ')' when passing function "
+                         "arguments in surrounded expressions.\n";
+            exit(1);
+        }
+    } while (CurrentToken != TOK_RPAREN);
     return std::make_unique<PrototypeASTNode>(FunctionName, Args);
 }

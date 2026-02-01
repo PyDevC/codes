@@ -65,6 +65,7 @@ class Keywords
     static const int m_Count;
 };
 
-static std::string IdentifierStr;
-static double NumVal;
+std::string getIdentifierStr();
+double getNumVal();
+void setoutput(std::string out);
 TokenType gettok();

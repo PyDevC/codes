@@ -3,7 +3,7 @@
 #include <map>
 
 static int CurrentToken;
-static void GetNextToken() { CurrentToken = gettok(); }
+void GetNextToken() { CurrentToken = gettok(); }
 
 static std::map<char, int> BinaryOpPrecedence = {
     {'+', 1},
@@ -151,12 +151,15 @@ std::unique_ptr<PrototypeASTNode> Parser::ParsePrototype()
         return nullptr;
     }
     std::string FunctionName = getIdentifierStr();
+    std::cout << FunctionName << "\n";
     GetNextToken(); // Consume Lparen
     if (CurrentToken != TOK_LPAREN) {
+        std::cout << CurrentToken << "No ( \n";
         return nullptr;
     }
     std::vector<std::string> Args;
     do {
+        // BUG: Fix rn since you are skipping somethings
         GetNextToken(); // Consume Lparen or Arg
         if (CurrentToken == TOK_IDENTIFIER) {
             Args.push_back(getIdentifierStr());
@@ -174,9 +177,11 @@ std::unique_ptr<PrototypeASTNode> Parser::ParsePrototype()
 std::unique_ptr<FunctionASTNode> Parser::ParseFunction()
 {
     GetNextToken();
+    std::cout << "Parse func: " << CurrentToken << "\n";
 
     auto Proto = ParsePrototype();
     if (!Proto) {
+    std::cout << "Is NULL:prototype" << "\n";
         return nullptr;
     }
 
@@ -198,9 +203,69 @@ std::unique_ptr<FunctionASTNode> Parser::ParseTopLevelExpr()
     if (auto E = ParseExpression()) {
         auto Proto = std::make_unique<PrototypeASTNode>(
             "__anon_expr", std::vector<std::string>());
-        // Passing empty list of arguments for prototyep
+        // Passing empty list of arguments for prototype
         return std::make_unique<FunctionASTNode>(std::move(Proto),
                                                  std::move(E));
     }
     return nullptr;
+}
+
+//===----------------------------------------------------------------------===//
+// Main Parser Helper Handles
+//===----------------------------------------------------------------------===//
+
+void HandleExtern(Parser *parser)
+{
+    if (parser->ParseExtern()) {
+        std::cout << "Parsed Extern\n";
+    } else {
+        GetNextToken();
+    }
+}
+
+void HandleDefinition(Parser *parser)
+{
+    if (parser->ParseFunction()) {
+        std::cout << "Parsed Function def\n";
+    } else {
+        GetNextToken();
+    }
+}
+
+void HandelTopLevelExpr(Parser *parser)
+{
+    if (parser->ParseTopLevelExpr()) {
+        std::cout << "Parsed Toplevel Expression\n";
+    } else {
+        GetNextToken();
+    }
+}
+
+void Parser::ParseMain()
+{
+    GetNextToken();
+    switch (CurrentToken) {
+    case TOK_EOF:
+        return;
+    case TOK_KEYWORD: {
+        Keywords keywords;
+        // We are practically repeating exactly same code here and can change it
+        // but not righting performance code so leave it.
+        Keyword keytoken = keywords.KeywordToCode(getIdentifierStr().c_str(),
+                                                  getIdentifierStr().size());
+        switch (keytoken) {
+        case KEYWORD_FUNCTION:
+            HandleDefinition(this);
+            break;
+        case KEYWORD_EXTERN:
+            HandleExtern(this);
+            break;
+        default:
+            return;
+        };
+    } break;
+    default:
+        HandelTopLevelExpr(this);
+        break;
+    };
 }

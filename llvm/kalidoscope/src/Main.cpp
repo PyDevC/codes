@@ -9,9 +9,14 @@ int main(void)
     Parser parser;
     do {
         std::cout << "read> ";
-        std::cin >> input;
+        // This input method is not the most efficient but a patch to previous
+        // whitespace skip bug
+        if (!std::getline(std::cin, input))
+            break;
+        if (input == "exit")
+            break;
         setoutput(input);
-        parser.ParseExpression();
+        parser.ParseMain();
     } while (true);
     return 0;
 }

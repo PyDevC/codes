@@ -4,6 +4,8 @@
 #include <string>
 #include <vector>
 
+void GetNextToken();
+
 // Base Class for all Nodes
 // List of Different types of Nodes:
 // - ExprASTNode
@@ -141,4 +143,6 @@ class Parser
     std::unique_ptr<FunctionASTNode> ParseFunction();
     std::unique_ptr<PrototypeASTNode> ParseExtern();
     std::unique_ptr<FunctionASTNode> ParseTopLevelExpr();
+
+    void ParseMain();
 };

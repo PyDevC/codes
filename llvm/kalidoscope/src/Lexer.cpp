@@ -23,6 +23,7 @@ const Keywords::Mapping Keywords::m_Mappings[] = {
     {"else", KEYWORD_ELSE},
     {"elseif", KEYWORD_ELSEIF},
     {"end", KEYWORD_END},
+    {"extern", KEYWORD_EXTERN},
     {"false", KEYWORD_FALSE},
     {"for", KEYWORD_FOR},
     {"function", KEYWORD_FUNCTION},
@@ -59,12 +60,7 @@ static int CompareKeywords(const void *keyv, const void *mapv)
     if (map->Keystring == NULL) {
         return 1;
     }
-    int i = strcmp(key->key, map->Keystring);
-    if (i != 0) {
-        return 1;
-    } else {
-        return 0;
-    }
+    return strcmp(key->key, map->Keystring);
 }
 
 Keyword Keywords::KeywordToCode(const char *keystring, size_t len) const
@@ -108,7 +104,7 @@ TokenType gettok()
         }
     }
     if (std::isalpha(LastChar)) {
-        IdentifierStr = LastChar;
+        IdentifierStr = "";
         while (std::isalnum(LastChar)) {
             IdentifierStr += LastChar;
             LastChar = getcharnow();
@@ -134,7 +130,6 @@ TokenType gettok()
     } else if (LastChar == EOF) {
         return TOK_EOF;
     } else {
-        LastChar = getcharnow();
         switch (LastChar) {
         case '+': {
             return TOK_OPERATOR_ADD;
@@ -147,6 +142,15 @@ TokenType gettok()
         } break;
         case '/': {
             return TOK_OPERATOR_DIV;
+        } break;
+        case '(': {
+            return TOK_LPAREN;
+        } break;
+        case ')': {
+            return TOK_RPAREN;
+        } break;
+        case ',': {
+            return TOK_COMMA;
         } break;
         default: {
         }

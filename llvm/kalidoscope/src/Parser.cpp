@@ -170,3 +170,37 @@ std::unique_ptr<PrototypeASTNode> Parser::ParsePrototype()
     } while (CurrentToken != TOK_RPAREN);
     return std::make_unique<PrototypeASTNode>(FunctionName, Args);
 }
+
+std::unique_ptr<FunctionASTNode> Parser::ParseFunction()
+{
+    GetNextToken();
+
+    auto Proto = ParsePrototype();
+    if (!Proto) {
+        return nullptr;
+    }
+
+    if (auto E = ParseExpression()) {
+        return std::make_unique<FunctionASTNode>(std::move(Proto),
+                                                 std::move(E));
+    }
+    return nullptr;
+}
+
+std::unique_ptr<PrototypeASTNode> Parser::ParseExtern()
+{
+    GetNextToken();
+    return ParsePrototype();
+}
+
+std::unique_ptr<FunctionASTNode> Parser::ParseTopLevelExpr()
+{
+    if (auto E = ParseExpression()) {
+        auto Proto = std::make_unique<PrototypeASTNode>(
+            "__anon_expr", std::vector<std::string>());
+        // Passing empty list of arguments for prototyep
+        return std::make_unique<FunctionASTNode>(std::move(Proto),
+                                                 std::move(E));
+    }
+    return nullptr;
+}

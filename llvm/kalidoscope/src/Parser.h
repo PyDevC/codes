@@ -115,11 +115,11 @@ class FunctionASTNode : public ASTNode
 {
   private:
     std::unique_ptr<PrototypeASTNode> m_Prototype;
-    std::unique_ptr<BlockASTNode> m_Block;
+    std::unique_ptr<ExprASTNode> m_Block;
 
   public:
     FunctionASTNode(std::unique_ptr<PrototypeASTNode> Prototype,
-                    std::unique_ptr<BlockASTNode> Block)
+                    std::unique_ptr<ExprASTNode> Block)
         : m_Prototype(std::move(Prototype)), m_Block(std::move(Block))
     {
     }
@@ -139,4 +139,6 @@ class Parser
     std::unique_ptr<ExprASTNode> ParseExpression();
     std::unique_ptr<PrototypeASTNode> ParsePrototype();
     std::unique_ptr<FunctionASTNode> ParseFunction();
+    std::unique_ptr<PrototypeASTNode> ParseExtern();
+    std::unique_ptr<FunctionASTNode> ParseTopLevelExpr();
 };

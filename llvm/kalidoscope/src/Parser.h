@@ -1,6 +1,5 @@
 #pragma once
 
-#include <map>
 #include <memory>
 #include <string>
 #include <vector>
@@ -138,4 +137,6 @@ class Parser
     std::unique_ptr<ExprASTNode> ParseIdentifierExpr();
     std::unique_ptr<ExprASTNode> ParsePrimaryExpr();
     std::unique_ptr<ExprASTNode> ParseExpression();
+    std::unique_ptr<PrototypeASTNode> ParsePrototype();
+    std::unique_ptr<FunctionASTNode> ParseFunction();
 };

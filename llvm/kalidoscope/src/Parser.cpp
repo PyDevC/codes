@@ -1,8 +1,28 @@
 #include "Parser.h"
 #include "Lexer.h"
+#include <map>
 
 static int CurrentToken;
 static int GetNextToken() { return CurrentToken = gettok(); }
+
+static std::map<char, int> BinaryOpPrecedence = {
+    {'+', 1},
+    {'-', 1},
+    {'*', 2},
+    {'/', 2},
+};
+
+static int GetTokPrecedence()
+{
+    if (!isascii(CurrentToken)) {
+        return -1;
+    }
+
+    int Precedence = BinaryOpPrecedence[CurrentToken];
+    if (Precedence <= 0)
+        return -1;
+    return Precedence;
+}
 
 std::unique_ptr<ExprASTNode> Parser::ParseNumberExpr()
 {
@@ -45,7 +65,7 @@ std::unique_ptr<ExprASTNode> Parser::ParseIdentifierExpr()
                 return nullptr;
             }
             GetNextToken(); // Consume Rparen or Comma
-            if (CurrentToken != TOK_COMMA) {
+            if (CurrentToken != TOK_COMMA && CurrentToken != TOK_RPAREN) {
                 std::cout << "Error: Expected ',' or ')' when passing function "
                              "arguments in surrounded expressions.\n";
                 exit(1);
@@ -82,4 +102,67 @@ std::unique_ptr<ExprASTNode> Parser::ParsePrimaryExpr()
     }
 }
 
-std::unique_ptr<ExprASTNode> Parser::ParseExpression() {}
+static std::unique_ptr<ExprASTNode>
+ParseBinaryOpRight(int Precedence, std::unique_ptr<ExprASTNode> Left)
+{
+    while (1) {
+        int CurrentTokenPrecedence = GetTokPrecedence();
+        // This means that the priority of lhs is higher than rhs
+        if (CurrentTokenPrecedence > Precedence) {
+            return Left;
+        }
+        int BinaryOp = CurrentToken;
+        GetNextToken(); // Consume BinaryOp
+        Parser
+            parser; // TODO: There is better way to do it I just don't konw yet
+        auto Right = parser.ParsePrimaryExpr();
+        if (!Right) {
+            return nullptr;
+        }
+        int NextPrecedence = GetTokPrecedence();
+        if (CurrentTokenPrecedence < NextPrecedence) {
+            Right = ParseBinaryOpRight(CurrentTokenPrecedence + 1,
+                                       std::move(Right));
+            if (!Right) {
+                return nullptr;
+            }
+        }
+        Left = std::make_unique<BinaryExprASTNode>(BinaryOp, std::move(Left),
+                                                   std::move(Right));
+    }
+}
+
+std::unique_ptr<ExprASTNode> Parser::ParseExpression()
+{
+    auto Left = ParsePrimaryExpr();
+    if (!Left) {
+        return nullptr;
+    }
+    return ParseBinaryOpRight(0, std::move(Left));
+}
+
+std::unique_ptr<PrototypeASTNode> Parser::ParsePrototype()
+{
+    if (CurrentToken != TOK_IDENTIFIER) {
+        return nullptr;
+    }
+    std::string FunctionName = IdentifierStr;
+    GetNextToken(); // Consume Lparen
+    if (CurrentToken != TOK_LPAREN) {
+        return nullptr;
+    }
+    std::vector<std::string> Args;
+        do {
+            GetNextToken(); // Consume Lparen or Arg
+            if (CurrentToken == TOK_IDENTIFIER) {
+               Args.push_back(IdentifierStr);
+            }
+            GetNextToken(); // Consume Rparen or Comma
+            if (CurrentToken != TOK_COMMA && CurrentToken != TOK_RPAREN) {
+                std::cout << "Error: Expected ',' or ')' when passing function "
+                             "arguments in surrounded expressions.\n";
+                exit(1);
+            }
+        } while (CurrentToken != TOK_RPAREN);
+    return std::make_unique<PrototypeASTNode>(FunctionName, Args);
+}

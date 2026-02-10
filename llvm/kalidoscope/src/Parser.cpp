@@ -11,7 +11,8 @@ static std::map<std::string, llvm::Value *> NamedValues;
 
 void GetNextToken() { CurrentToken = gettok(); }
 
-llvm::Value *LogErrorV(const char* Str){
+llvm::Value *LogErrorV(const char *Str)
+{
     LogError(Str);
     return nullptr;
 }
@@ -35,64 +36,113 @@ static int GetTokPrecedence()
     return Precedence;
 }
 
-llvm::Value* NumberExprASTNode::codegen(){
+llvm::Value *NumberExprASTNode::codegen()
+{
     return llvm::ConstantFP::get(*Context, llvm::APFloat(getNumVal()));
 }
 
-llvm::Value* VariableExprASTNode::codegen(){
-    llvm::Value* V = NamedValues[m_VarName];
-    if(!V){
+llvm::Value *VariableExprASTNode::codegen()
+{
+    llvm::Value *V = NamedValues[m_VarName];
+    if (!V) {
         return LogErrorV("Unknown Variable Name");
     }
     return V;
 }
 
-llvm::Value* BinaryExprASTNode::codegen(){
-    llvm::Value* Lf = m_Left->codegen();
-    llvm::Value* Rg = m_Right->codegen();
-    if(!Lf || !Rg){
+llvm::Value *BinaryExprASTNode::codegen()
+{
+    llvm::Value *Lf = m_Left->codegen();
+    llvm::Value *Rg = m_Right->codegen();
+    if (!Lf || !Rg) {
         return nullptr;
     }
 
-    switch(m_Op){
-        case '+':
-            return Builder->CreateFAdd(Lf, Rg, "addtmp");
-        case '-':
-            return Builder->CreateFSub(Lf, Rg, "subtmp");
-        case '*':
-            return Builder->CreateFMul(Lf, Rg, "multmp");
-        case '/':
-            return Builder->CreateFDiv(Lf, Rg, "multmp");
-        default:
-            return LogErrorV("Invalid Binary Operator");
+    switch (m_Op) {
+    case '+':
+        return Builder->CreateFAdd(Lf, Rg, "addtmp");
+    case '-':
+        return Builder->CreateFSub(Lf, Rg, "subtmp");
+    case '*':
+        return Builder->CreateFMul(Lf, Rg, "multmp");
+    case '/':
+        return Builder->CreateFDiv(Lf, Rg, "multmp");
+    default:
+        return LogErrorV("Invalid Binary Operator");
     };
 }
 
-llvm::Value* CallExprASTNode::codegen(){
+llvm::Value *CallExprASTNode::codegen()
+{
     llvm::Function *CalleeF = Module->getFunction(m_Callee);
-    if(!CalleeF){
+    if (!CalleeF) {
         return LogErrorV("Unknown Function call");
     }
 
     // Argument missmatch error? Can it even happen?
-    if (CalleeF->arg_size() != m_Args.size()){
+    if (CalleeF->arg_size() != m_Args.size()) {
         return LogErrorV("Incorrect number of arguments are passed");
     }
 
     std::vector<llvm::Value *> ArgsV;
-    for (unsigned i = 0, e = ArgsV.size(); i!=e; ++i){
+    for (unsigned i = 0, e = ArgsV.size(); i != e; ++i) {
         ArgsV.push_back(m_Args[i]->codegen());
-        if(!ArgsV.back()){
+        if (!ArgsV.back()) {
             return nullptr;
         }
     }
     return Builder->CreateCall(CalleeF, ArgsV, "calltmp");
 }
 
-llvm::Function* PrototypeASTNode::codegen(){
-    std::vector<llvm::Type *> Doubles(m_Args.size(), llvm::Type::getDoubleTy(*Context));
-    llvm::FunctionType* FuncType = llvm::FunctionType::get(llvm::Type::getDoubleTy(*Context), Doubles, false);
-    llvm::Function* Func = llvm::Function::Create(FuncType, llvm::Function::ExternalLinkage, m_PrototypeName, Module.get());
+llvm::Function *PrototypeASTNode::codegen()
+{
+    std::vector<llvm::Type *> Doubles(m_Args.size(),
+                                      llvm::Type::getDoubleTy(*Context));
+    llvm::FunctionType *FuncType = llvm::FunctionType::get(
+        llvm::Type::getDoubleTy(*Context), Doubles, false);
+    llvm::Function *Func =
+        llvm::Function::Create(FuncType, llvm::Function::ExternalLinkage,
+                               m_PrototypeName, Module.get());
+
+    unsigned Idx = 0;
+    for (auto &Arg : Func->args()) {
+        Arg.setName(m_Args[Idx++]);
+    }
+    return Func;
+}
+
+llvm::Function *FunctionASTNode::codegen()
+{
+    llvm::Function *Func = Module->getFunction(m_Prototype->getName());
+
+    if (!Func) {
+        Func = m_Prototype->codegen();
+    }
+
+    if (!Func) {
+        return nullptr;
+    }
+
+    if (!Func->empty()) {
+        return (llvm::Function *)LogErrorV("Function cannot be redefined");
+    }
+
+    llvm::BasicBlock *BBlock =
+        llvm::BasicBlock::Create(*Context, "entry", Func);
+    Builder->SetInsertPoint(BBlock);
+
+    NamedValues.clear();
+    for (auto &Arg : Func->args()) {
+        NamedValues[std::string(Arg.getName())] = &Arg;
+    }
+
+    if (llvm::Value *ReturnVal = m_Block->codegen()) {
+        Builder->CreateRet(ReturnVal);
+        llvm::verifyFunction(*Func);
+        return Func;
+    }
+    Func->eraseFromParent();
+    return nullptr;
 }
 
 std::unique_ptr<ExprASTNode> Parser::ParseNumberExpr()
@@ -252,7 +302,7 @@ std::unique_ptr<FunctionASTNode> Parser::ParseFunction()
 
     auto Proto = ParsePrototype();
     if (!Proto) {
-    std::cout << "Is NULL:prototype" << "\n";
+        std::cout << "Is NULL:prototype" << "\n";
         return nullptr;
     }
 
@@ -285,10 +335,21 @@ std::unique_ptr<FunctionASTNode> Parser::ParseTopLevelExpr()
 // Main Parser Helper Handles
 //===----------------------------------------------------------------------===//
 
+void InitializeModule()
+{
+    Context = std::make_unique<llvm::LLVMContext>();
+    Module = std::make_unique<llvm::Module>("Main INIT", *Context);
+    Builder = std::make_unique<llvm::IRBuilder<>>(*Context);
+}
+
 void HandleExtern(Parser *parser)
 {
-    if (parser->ParseExtern()) {
-        std::cout << "Parsed Extern\n";
+    if (auto ProtoAST = parser->ParseExtern()) {
+        if (auto *FuncIR = ProtoAST->codegen()) {
+            std::cout << "Parsed Extern\n";
+            FuncIR->print(llvm::errs());
+            fprintf(stderr, "\n");
+        }
     } else {
         GetNextToken();
     }
@@ -296,8 +357,12 @@ void HandleExtern(Parser *parser)
 
 void HandleDefinition(Parser *parser)
 {
-    if (parser->ParseFunction()) {
-        std::cout << "Parsed Function def\n";
+    if (auto FuncAST = parser->ParseFunction()) {
+        if (auto *FuncIR = FuncAST->codegen()) {
+            std::cout << "Parsed Function def\n";
+            FuncIR->print(llvm::errs());
+            fprintf(stderr, "\n");
+        }
     } else {
         GetNextToken();
     }
@@ -305,8 +370,13 @@ void HandleDefinition(Parser *parser)
 
 void HandelTopLevelExpr(Parser *parser)
 {
-    if (parser->ParseTopLevelExpr()) {
-        std::cout << "Parsed Toplevel Expression\n";
+    if (auto FuncAST = parser->ParseTopLevelExpr()) {
+        if (auto *FuncIR = FuncAST->codegen()) {
+            std::cout << "Parsed Toplevel Expression\n";
+            FuncIR->print(llvm::errs());
+            fprintf(stderr, "\n");
+            FuncIR->eraseFromParent();
+        }
     } else {
         GetNextToken();
     }

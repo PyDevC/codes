@@ -5,6 +5,16 @@
 #include <vector>
 
 #include <llvm/IR/IRBuilder.h>
+#include "llvm/ADT/APFloat.h"
+#include "llvm/ADT/STLExtras.h"
+#include "llvm/IR/BasicBlock.h"
+#include "llvm/IR/Constants.h"
+#include "llvm/IR/DerivedTypes.h"
+#include "llvm/IR/Function.h"
+#include "llvm/IR/LLVMContext.h"
+#include "llvm/IR/Module.h"
+#include "llvm/IR/Type.h"
+#include "llvm/IR/Verifier.h"
 
 void GetNextToken();
 
@@ -119,6 +129,8 @@ class PrototypeASTNode : public ASTNode
         : m_PrototypeName(Name), m_Args(Args)
     {
     }
+
+    std::string getName() const {return m_PrototypeName;}
     ~PrototypeASTNode() override {}
     llvm::Function* codegen();
 };
@@ -136,6 +148,7 @@ class FunctionASTNode : public ASTNode
     {
     }
     ~FunctionASTNode() override {}
+    llvm::Function* codegen();
 };
 
 class Parser
@@ -156,3 +169,5 @@ class Parser
 
     void ParseMain();
 };
+
+void InitializeModule();

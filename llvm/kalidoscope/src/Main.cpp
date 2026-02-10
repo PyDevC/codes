@@ -7,6 +7,7 @@ int main(void)
 {
     std::string input;
     Parser parser;
+    InitializeModule();
     do {
         std::cout << "read> ";
         // This input method is not the most efficient but a patch to previous

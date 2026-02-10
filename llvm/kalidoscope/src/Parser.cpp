@@ -9,7 +9,9 @@ static std::unique_ptr<llvm::IRBuilder<>> Builder;
 static std::unique_ptr<llvm::Module> Module;
 static std::map<std::string, llvm::Value *> NamedValues;
 
-void GetNextToken() { CurrentToken = gettok(); }
+void GetNextToken() { 
+    CurrentToken = gettok(); 
+}
 
 llvm::Value *LogErrorV(const char *Str)
 {
@@ -272,10 +274,10 @@ std::unique_ptr<PrototypeASTNode> Parser::ParsePrototype()
         return nullptr;
     }
     std::string FunctionName = getIdentifierStr();
-    std::cout << FunctionName << "\n";
+    std::cout << "FunctionName: " + FunctionName << "\n";
     GetNextToken(); // Consume Lparen
     if (CurrentToken != TOK_LPAREN) {
-        std::cout << CurrentToken << "No ( \n";
+        std::cout << CurrentToken << " No ( \n";
         return nullptr;
     }
     std::vector<std::string> Args;

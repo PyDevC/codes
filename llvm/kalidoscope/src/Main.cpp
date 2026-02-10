@@ -17,6 +17,7 @@ int main(void)
         if (input == "exit")
             break;
         setoutput(input);
+        input = "";
         parser.ParseMain();
     } while (true);
     return 0;

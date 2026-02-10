@@ -8,7 +8,7 @@ static std::string output;
 static std::string IdentifierStr;
 static double NumVal;
 
-void setoutput(std::string out) { output = out; }
+void setoutput(std::string out) { output = out; std::cout << output << std::endl; }
 std::string getIdentifierStr() { return IdentifierStr; }
 double getNumVal() { return NumVal; }
 
@@ -124,13 +124,16 @@ TokenType gettok()
             // TODO: make sure that it's only valid for onetime . not more than
             // one Ex: 0.124 is right but 1.2.3 is wrong
             NumStr += LastChar;
+            LastChar = getcharnow();
         }
         NumVal = std::strtod(NumStr.c_str(), NULL);
         return TOK_NUMVAL;
     } else if (LastChar == EOF) {
         return TOK_EOF;
     } else {
-        switch (LastChar) {
+        char ThisChar = LastChar;
+        LastChar = getcharnow();
+        switch (ThisChar) {
         case '+': {
             return TOK_OPERATOR_ADD;
         } break;

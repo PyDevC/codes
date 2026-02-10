@@ -4,7 +4,11 @@
 #include <string>
 #include <vector>
 
+#include <llvm/IR/IRBuilder.h>
+
 void GetNextToken();
+
+llvm::Value *LogErrorV(const char* Str);
 
 // Base Class for all Nodes
 // List of Different types of Nodes:
@@ -26,6 +30,7 @@ class ExprASTNode : public ASTNode
   public:
     ExprASTNode() {}
     virtual ~ExprASTNode() override {}
+    virtual llvm::Value* codegen() = 0;
 };
 
 class NumberExprASTNode : public ExprASTNode
@@ -36,6 +41,7 @@ class NumberExprASTNode : public ExprASTNode
   public:
     NumberExprASTNode(double NumberVal) : m_NumberVal(NumberVal) {}
     ~NumberExprASTNode() override {}
+    llvm::Value *codegen() override;
 };
 
 class VariableExprASTNode : public ExprASTNode
@@ -47,6 +53,7 @@ class VariableExprASTNode : public ExprASTNode
   public:
     VariableExprASTNode(const std::string &VarName) : m_VarName(VarName) {}
     ~VariableExprASTNode() override {}
+    llvm::Value *codegen() override;
 };
 
 class BinaryExprASTNode : public ExprASTNode
@@ -62,6 +69,7 @@ class BinaryExprASTNode : public ExprASTNode
     {
     }
     ~BinaryExprASTNode() override {}
+    llvm::Value *codegen() override;
 };
 
 class UnaryExprASTNode : public ExprASTNode
@@ -91,6 +99,7 @@ class CallExprASTNode : public ExprASTNode
     {
     }
     ~CallExprASTNode() override {}
+    llvm::Value* codegen() override;
 };
 
 class BlockASTNode : public ASTNode
@@ -111,6 +120,7 @@ class PrototypeASTNode : public ASTNode
     {
     }
     ~PrototypeASTNode() override {}
+    llvm::Function* codegen();
 };
 
 class FunctionASTNode : public ASTNode

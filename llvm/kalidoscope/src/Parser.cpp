@@ -1,9 +1,20 @@
 #include "Parser.h"
+#include "Errors.h"
 #include "Lexer.h"
 #include <map>
 
 static int CurrentToken;
+static std::unique_ptr<llvm::LLVMContext> Context;
+static std::unique_ptr<llvm::IRBuilder<>> Builder;
+static std::unique_ptr<llvm::Module> Module;
+static std::map<std::string, llvm::Value *> NamedValues;
+
 void GetNextToken() { CurrentToken = gettok(); }
+
+llvm::Value *LogErrorV(const char* Str){
+    LogError(Str);
+    return nullptr;
+}
 
 static std::map<char, int> BinaryOpPrecedence = {
     {'+', 1},
@@ -22,6 +33,66 @@ static int GetTokPrecedence()
     if (Precedence <= 0)
         return -1;
     return Precedence;
+}
+
+llvm::Value* NumberExprASTNode::codegen(){
+    return llvm::ConstantFP::get(*Context, llvm::APFloat(getNumVal()));
+}
+
+llvm::Value* VariableExprASTNode::codegen(){
+    llvm::Value* V = NamedValues[m_VarName];
+    if(!V){
+        return LogErrorV("Unknown Variable Name");
+    }
+    return V;
+}
+
+llvm::Value* BinaryExprASTNode::codegen(){
+    llvm::Value* Lf = m_Left->codegen();
+    llvm::Value* Rg = m_Right->codegen();
+    if(!Lf || !Rg){
+        return nullptr;
+    }
+
+    switch(m_Op){
+        case '+':
+            return Builder->CreateFAdd(Lf, Rg, "addtmp");
+        case '-':
+            return Builder->CreateFSub(Lf, Rg, "subtmp");
+        case '*':
+            return Builder->CreateFMul(Lf, Rg, "multmp");
+        case '/':
+            return Builder->CreateFDiv(Lf, Rg, "multmp");
+        default:
+            return LogErrorV("Invalid Binary Operator");
+    };
+}
+
+llvm::Value* CallExprASTNode::codegen(){
+    llvm::Function *CalleeF = Module->getFunction(m_Callee);
+    if(!CalleeF){
+        return LogErrorV("Unknown Function call");
+    }
+
+    // Argument missmatch error? Can it even happen?
+    if (CalleeF->arg_size() != m_Args.size()){
+        return LogErrorV("Incorrect number of arguments are passed");
+    }
+
+    std::vector<llvm::Value *> ArgsV;
+    for (unsigned i = 0, e = ArgsV.size(); i!=e; ++i){
+        ArgsV.push_back(m_Args[i]->codegen());
+        if(!ArgsV.back()){
+            return nullptr;
+        }
+    }
+    return Builder->CreateCall(CalleeF, ArgsV, "calltmp");
+}
+
+llvm::Function* PrototypeASTNode::codegen(){
+    std::vector<llvm::Type *> Doubles(m_Args.size(), llvm::Type::getDoubleTy(*Context));
+    llvm::FunctionType* FuncType = llvm::FunctionType::get(llvm::Type::getDoubleTy(*Context), Doubles, false);
+    llvm::Function* Func = llvm::Function::Create(FuncType, llvm::Function::ExternalLinkage, m_PrototypeName, Module.get());
 }
 
 std::unique_ptr<ExprASTNode> Parser::ParseNumberExpr()

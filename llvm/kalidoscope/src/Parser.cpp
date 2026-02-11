@@ -284,8 +284,8 @@ std::unique_ptr<PrototypeASTNode> Parser::ParsePrototype()
         GetNextToken(); // Consume Lparen or Arg
         if (CurrentToken == TOK_IDENTIFIER) {
             Args.push_back(getIdentifierStr());
+            GetNextToken(); // Consume Rparen or Comma
         }
-        GetNextToken(); // Consume Rparen or Comma
         if (CurrentToken != TOK_COMMA && CurrentToken != TOK_RPAREN) {
             std::cout << "Error: Expected ',' or ')' when passing function "
                          "arguments in surrounded expressions.\n";

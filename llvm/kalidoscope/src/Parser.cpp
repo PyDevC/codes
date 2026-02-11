@@ -9,7 +9,10 @@ static std::unique_ptr<llvm::IRBuilder<>> Builder;
 static std::unique_ptr<llvm::Module> Module;
 static std::map<std::string, llvm::Value *> NamedValues;
 
-void GetNextToken() { CurrentToken = gettok(); }
+void GetNextToken() { 
+    CurrentToken = gettok(); 
+    std::cout << "CurrentToken After calling gettok: " << CurrentToken << std::endl;
+}
 
 std::unique_ptr<llvm::Module> getModule() { return std::move(Module); }
 
@@ -223,7 +226,7 @@ std::unique_ptr<ExprASTNode> Parser::ParsePrimaryExpr()
         return nullptr;
     };
     default:
-        std::cout << "Error: Token Unexpected.\n";
+        std::cout << "Error: Token Unexpected received " << CurrentToken << "\n";
         exit(1);
     }
 }
@@ -239,8 +242,8 @@ ParseBinaryOpRight(int Precedence, std::unique_ptr<ExprASTNode> Left)
         }
         int BinaryOp = CurrentToken;
         GetNextToken(); // Consume BinaryOp
-        Parser
-            parser; // TODO: There is better way to do it I just don't konw yet
+        Parser parser; 
+        // TODO: There is better way to do it I just don't konw yet
         auto Right = parser.ParsePrimaryExpr();
         if (!Right) {
             return nullptr;
@@ -293,13 +296,13 @@ std::unique_ptr<PrototypeASTNode> Parser::ParsePrototype()
             exit(1);
         }
     } while (CurrentToken != TOK_RPAREN);
+    GetNextToken(); // Consume Rparen
     return std::make_unique<PrototypeASTNode>(FunctionName, Args);
 }
 
 std::unique_ptr<FunctionASTNode> Parser::ParseFunction()
 {
     GetNextToken();
-    std::cout << "Parse func: " << CurrentToken << "\n";
 
     auto Proto = ParsePrototype();
     if (!Proto) {

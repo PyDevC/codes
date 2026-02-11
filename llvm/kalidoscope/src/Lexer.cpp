@@ -162,6 +162,9 @@ TokenType gettok()
         case ',': {
             return TOK_COMMA;
         } break;
+        case ';': {
+            return TOK_SEMICOLON;
+        } break;
         default: {
         }
         };

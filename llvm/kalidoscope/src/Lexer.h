@@ -46,6 +46,7 @@ enum TokenType {
     TOK_LPAREN,
     TOK_RPAREN,
     TOK_COMMA,
+    TOK_SEMICOLON,
 };
 
 class Keywords

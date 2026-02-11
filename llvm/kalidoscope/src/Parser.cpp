@@ -9,9 +9,11 @@ static std::unique_ptr<llvm::IRBuilder<>> Builder;
 static std::unique_ptr<llvm::Module> Module;
 static std::map<std::string, llvm::Value *> NamedValues;
 
-void GetNextToken() { 
-    CurrentToken = gettok(); 
-    std::cout << "CurrentToken After calling gettok: " << CurrentToken << std::endl;
+void GetNextToken()
+{
+    CurrentToken = gettok();
+    std::cout << "CurrentToken After calling gettok: " << CurrentToken
+              << std::endl;
 }
 
 std::unique_ptr<llvm::Module> getModule() { return std::move(Module); }
@@ -23,17 +25,18 @@ llvm::Value *LogErrorV(const char *Str)
 }
 
 static std::map<char, int> BinaryOpPrecedence = {
-    {TOK_OPERATOR_ADD, 1},
-    {TOK_OPERATOR_SUB, 1},
-    {TOK_OPERATOR_MUL, 2},
-    {TOK_OPERATOR_DIV, 2},
+    {TOK_OPERATOR_ADD, 10},
+    {TOK_OPERATOR_SUB, 10},
+    {TOK_OPERATOR_MUL, 20},
+    {TOK_OPERATOR_DIV, 20},
 };
 
 static int GetTokPrecedence()
 {
     int Precedence = BinaryOpPrecedence[CurrentToken];
-    if (Precedence <= 0)
+    if (Precedence <= 0) {
         return -1;
+    }
     return Precedence;
 }
 
@@ -60,13 +63,13 @@ llvm::Value *BinaryExprASTNode::codegen()
     }
 
     switch (m_Op) {
-    case '+':
+    case TOK_OPERATOR_ADD:
         return Builder->CreateFAdd(Lf, Rg, "addtmp");
-    case '-':
+    case TOK_OPERATOR_SUB:
         return Builder->CreateFSub(Lf, Rg, "subtmp");
-    case '*':
+    case TOK_OPERATOR_MUL:
         return Builder->CreateFMul(Lf, Rg, "multmp");
-    case '/':
+    case TOK_OPERATOR_DIV:
         return Builder->CreateFDiv(Lf, Rg, "multmp");
     default:
         return LogErrorV("Invalid Binary Operator");
@@ -172,6 +175,7 @@ std::unique_ptr<ExprASTNode> Parser::ParseParenExpr()
 std::unique_ptr<ExprASTNode> Parser::ParseIdentifierExpr()
 {
     std::string IdentName = getIdentifierStr();
+    std::cout << "Identifier Name: " << IdentName << std::endl;
     GetNextToken(); // Consume Identifier
     // Check for function call
     if (CurrentToken != TOK_LPAREN) {
@@ -196,6 +200,9 @@ std::unique_ptr<ExprASTNode> Parser::ParseIdentifierExpr()
 
         auto call =
             std::make_unique<CallExprASTNode>(IdentName, std::move(Args));
+        if (!call) {
+            std::cout << "Calling is NULL" << std::endl;
+        }
 
         if (CurrentToken != TOK_RPAREN) {
             std::cout
@@ -222,7 +229,8 @@ std::unique_ptr<ExprASTNode> Parser::ParsePrimaryExpr()
         return nullptr;
     };
     default:
-        std::cout << "Error: Token Unexpected received " << CurrentToken << "\n";
+        std::cout << "Error: Token Unexpected received " << CurrentToken
+                  << "\n";
         exit(1);
     }
 }
@@ -233,12 +241,12 @@ ParseBinaryOpRight(int Precedence, std::unique_ptr<ExprASTNode> Left)
     while (1) {
         int CurrentTokenPrecedence = GetTokPrecedence();
         // This means that the priority of lhs is higher than rhs
-        if (CurrentTokenPrecedence > Precedence) {
+        if (CurrentTokenPrecedence < Precedence) {
             return Left;
         }
         int BinaryOp = CurrentToken;
         GetNextToken(); // Consume BinaryOp
-        Parser parser; 
+        Parser parser;
         // TODO: There is better way to do it I just don't konw yet
         auto Right = parser.ParsePrimaryExpr();
         if (!Right) {
@@ -372,7 +380,6 @@ void HandleDefinition(Parser *parser)
 void HandelTopLevelExpr(Parser *parser)
 {
     if (auto FuncAST = parser->ParseTopLevelExpr()) {
-        std::cout << "Parsed";
         if (auto *FuncIR = FuncAST->codegen()) {
             std::cout << "Parsed Toplevel Expression\n";
             FuncIR->print(llvm::errs());

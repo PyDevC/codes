@@ -7,8 +7,15 @@ static int get_char_index = 0;
 static std::string output;
 static std::string IdentifierStr;
 static double NumVal;
+static char LastChar = ' ';
 
-void setoutput(std::string out) { output = out; std::cout << output << std::endl; }
+void setoutput(std::string out)
+{
+    output = out;
+    get_char_index = 0;
+    LastChar = ' ';
+}
+
 std::string getIdentifierStr() { return IdentifierStr; }
 double getNumVal() { return NumVal; }
 
@@ -80,6 +87,7 @@ Keyword Keywords::KeywordToCode(const char *keystring, size_t len) const
 int getcharnow()
 {
     if (get_char_index >= output.size()) {
+        get_char_index = 0;
         return EOF;
     }
     get_char_index++;
@@ -89,7 +97,6 @@ int getcharnow()
 TokenType gettok()
 {
     // Why would you set it to whitespace first
-    static char LastChar = ' ';
     while (isspace(LastChar)) {
         LastChar = getcharnow();
     }

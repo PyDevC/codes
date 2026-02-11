@@ -9,9 +9,9 @@ static std::unique_ptr<llvm::IRBuilder<>> Builder;
 static std::unique_ptr<llvm::Module> Module;
 static std::map<std::string, llvm::Value *> NamedValues;
 
-void GetNextToken() { 
-    CurrentToken = gettok(); 
-}
+void GetNextToken() { CurrentToken = gettok(); }
+
+std::unique_ptr<llvm::Module> getModule() { return std::move(Module); }
 
 llvm::Value *LogErrorV(const char *Str)
 {
@@ -260,7 +260,6 @@ ParseBinaryOpRight(int Precedence, std::unique_ptr<ExprASTNode> Left)
 
 std::unique_ptr<ExprASTNode> Parser::ParseExpression()
 {
-    GetNextToken();
     auto Left = ParsePrimaryExpr();
     if (!Left) {
         return nullptr;
@@ -324,6 +323,7 @@ std::unique_ptr<PrototypeASTNode> Parser::ParseExtern()
 std::unique_ptr<FunctionASTNode> Parser::ParseTopLevelExpr()
 {
     if (auto E = ParseExpression()) {
+        std::cout << "Parsed" << std::endl;
         auto Proto = std::make_unique<PrototypeASTNode>(
             "__anon_expr", std::vector<std::string>());
         // Passing empty list of arguments for prototype
@@ -373,6 +373,7 @@ void HandleDefinition(Parser *parser)
 void HandelTopLevelExpr(Parser *parser)
 {
     if (auto FuncAST = parser->ParseTopLevelExpr()) {
+        std::cout << "Parsed";
         if (auto *FuncIR = FuncAST->codegen()) {
             std::cout << "Parsed Toplevel Expression\n";
             FuncIR->print(llvm::errs());

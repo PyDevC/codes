@@ -171,3 +171,4 @@ class Parser
 };
 
 void InitializeModule();
+std::unique_ptr<llvm::Module> getModule();

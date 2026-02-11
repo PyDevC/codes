@@ -20,5 +20,6 @@ int main(void)
         input = "";
         parser.ParseMain();
     } while (true);
+    getModule()->print(llvm::errs(), nullptr);
     return 0;
 }

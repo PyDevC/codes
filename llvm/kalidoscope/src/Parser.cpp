@@ -23,18 +23,14 @@ llvm::Value *LogErrorV(const char *Str)
 }
 
 static std::map<char, int> BinaryOpPrecedence = {
-    {'+', 1},
-    {'-', 1},
-    {'*', 2},
-    {'/', 2},
+    {TOK_OPERATOR_ADD, 1},
+    {TOK_OPERATOR_SUB, 1},
+    {TOK_OPERATOR_MUL, 2},
+    {TOK_OPERATOR_DIV, 2},
 };
 
 static int GetTokPrecedence()
 {
-    if (!isascii(CurrentToken)) {
-        return -1;
-    }
-
     int Precedence = BinaryOpPrecedence[CurrentToken];
     if (Precedence <= 0)
         return -1;

@@ -9,12 +9,7 @@ static std::unique_ptr<llvm::IRBuilder<>> Builder;
 static std::unique_ptr<llvm::Module> Module;
 static std::map<std::string, llvm::Value *> NamedValues;
 
-void GetNextToken()
-{
-    CurrentToken = gettok();
-    std::cout << "CurrentToken After calling gettok: " << CurrentToken
-              << std::endl;
-}
+void GetNextToken() { CurrentToken = gettok(); }
 
 std::unique_ptr<llvm::Module> getModule() { return std::move(Module); }
 
@@ -89,7 +84,7 @@ llvm::Value *CallExprASTNode::codegen()
     }
 
     std::vector<llvm::Value *> ArgsV;
-    for (unsigned i = 0, e = ArgsV.size(); i != e; ++i) {
+    for (unsigned i = 0, e = m_Args.size(); i != e; ++i) {
         ArgsV.push_back(m_Args[i]->codegen());
         if (!ArgsV.back()) {
             return nullptr;
@@ -102,8 +97,10 @@ llvm::Function *PrototypeASTNode::codegen()
 {
     std::vector<llvm::Type *> Doubles(m_Args.size(),
                                       llvm::Type::getDoubleTy(*Context));
+
     llvm::FunctionType *FuncType = llvm::FunctionType::get(
         llvm::Type::getDoubleTy(*Context), Doubles, false);
+
     llvm::Function *Func =
         llvm::Function::Create(FuncType, llvm::Function::ExternalLinkage,
                                m_PrototypeName, Module.get());
@@ -175,7 +172,6 @@ std::unique_ptr<ExprASTNode> Parser::ParseParenExpr()
 std::unique_ptr<ExprASTNode> Parser::ParseIdentifierExpr()
 {
     std::string IdentName = getIdentifierStr();
-    std::cout << "Identifier Name: " << IdentName << std::endl;
     GetNextToken(); // Consume Identifier
     // Check for function call
     if (CurrentToken != TOK_LPAREN) {
@@ -184,31 +180,28 @@ std::unique_ptr<ExprASTNode> Parser::ParseIdentifierExpr()
         // parse args
         std::vector<std::unique_ptr<ExprASTNode>> Args;
         do {
-            GetNextToken(); // Consume Lparen or Arg
+            GetNextToken(); // Consume Lparen
             if (auto Arg = ParseExpression()) {
                 Args.push_back(std::move(Arg));
             } else {
                 return nullptr;
             }
-            GetNextToken(); // Consume Rparen or Comma
             if (CurrentToken != TOK_COMMA && CurrentToken != TOK_RPAREN) {
                 std::cout << "Error: Expected ',' or ')' when passing function "
                              "arguments in surrounded expressions.\n";
                 exit(1);
             }
-        } while (CurrentToken != TOK_RPAREN);
+        } while (CurrentToken != TOK_RPAREN); // Break the loop
 
         auto call =
             std::make_unique<CallExprASTNode>(IdentName, std::move(Args));
-        if (!call) {
-            std::cout << "Calling is NULL" << std::endl;
-        }
 
         if (CurrentToken != TOK_RPAREN) {
             std::cout
                 << "Error: Expected ')' after '(' in surrounded expressions.\n";
             exit(1);
         }
+        GetNextToken();
         return call;
     }
 }
@@ -280,10 +273,9 @@ std::unique_ptr<PrototypeASTNode> Parser::ParsePrototype()
         return nullptr;
     }
     std::string FunctionName = getIdentifierStr();
-    std::cout << "FunctionName: " + FunctionName << "\n";
     GetNextToken(); // Consume Lparen
     if (CurrentToken != TOK_LPAREN) {
-        std::cout << CurrentToken << " No ( \n";
+        LogError("Expected a ( but got none");
         return nullptr;
     }
     std::vector<std::string> Args;
@@ -310,7 +302,6 @@ std::unique_ptr<FunctionASTNode> Parser::ParseFunction()
 
     auto Proto = ParsePrototype();
     if (!Proto) {
-        std::cout << "Is NULL:prototype" << "\n";
         return nullptr;
     }
 
@@ -330,7 +321,6 @@ std::unique_ptr<PrototypeASTNode> Parser::ParseExtern()
 std::unique_ptr<FunctionASTNode> Parser::ParseTopLevelExpr()
 {
     if (auto E = ParseExpression()) {
-        std::cout << "Parsed" << std::endl;
         auto Proto = std::make_unique<PrototypeASTNode>(
             "__anon_expr", std::vector<std::string>());
         // Passing empty list of arguments for prototype
@@ -355,7 +345,6 @@ void HandleExtern(Parser *parser)
 {
     if (auto ProtoAST = parser->ParseExtern()) {
         if (auto *FuncIR = ProtoAST->codegen()) {
-            std::cout << "Parsed Extern\n";
             FuncIR->print(llvm::errs());
             fprintf(stderr, "\n");
         }
@@ -368,7 +357,6 @@ void HandleDefinition(Parser *parser)
 {
     if (auto FuncAST = parser->ParseFunction()) {
         if (auto *FuncIR = FuncAST->codegen()) {
-            std::cout << "Parsed Function def\n";
             FuncIR->print(llvm::errs());
             fprintf(stderr, "\n");
         }
@@ -381,7 +369,6 @@ void HandelTopLevelExpr(Parser *parser)
 {
     if (auto FuncAST = parser->ParseTopLevelExpr()) {
         if (auto *FuncIR = FuncAST->codegen()) {
-            std::cout << "Parsed Toplevel Expression\n";
             FuncIR->print(llvm::errs());
             fprintf(stderr, "\n");
             FuncIR->eraseFromParent();

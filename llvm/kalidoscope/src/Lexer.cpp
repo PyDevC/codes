@@ -125,8 +125,7 @@ TokenType gettok()
             return TOK_KEYWORD;
         }
     } else if (std::isdigit(LastChar)) {
-        std::string NumStr;
-        NumStr += LastChar;
+        std::string NumStr = "";
         while (std::isdigit(LastChar) || LastChar == '.') {
             // TODO: make sure that it's only valid for onetime . not more than
             // one Ex: 0.124 is right but 1.2.3 is wrong

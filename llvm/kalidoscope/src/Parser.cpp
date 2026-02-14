@@ -9,9 +9,21 @@ static std::unique_ptr<llvm::IRBuilder<>> Builder;
 static std::unique_ptr<llvm::Module> Module;
 static std::map<std::string, llvm::Value *> NamedValues;
 
+static std::unique_ptr<KaleidoscopeJIT> TheJIT;
+static std::unique_ptr<llvm::FunctionPassManager> FuncPass_M;
+static std::unique_ptr<llvm::LoopAnalysisManager> LoopAnaysis_M;
+static std::unique_ptr<llvm::FunctionAnalysisManager> FuncAnalysis_M;
+static std::unique_ptr<llvm::CGSCCAnalysisManager> CGSCCAnalysis_M;
+static std::unique_ptr<llvm::ModuleAnalysisManager> ModuleAnalysis_M;
+static std::unique_ptr<llvm::PassInstrumentationCallbacks> PassInstCallbacks;
+static std::unique_ptr<llvm::StandardInstrumentations> StdInst;
+static std::map<std::string, std::unique_ptr<PrototypeASTNode>> FunctionProtos;
+static llvm::ExitOnError ExitOnErr;
+
 void GetNextToken() { CurrentToken = gettok(); }
 
 std::unique_ptr<llvm::Module> getModule() { return std::move(Module); }
+std::unique_ptr<KaleidoscopeJIT> getTheJIT(){return std::move(TheJIT);}
 
 llvm::Value *LogErrorV(const char *Str)
 {
@@ -140,6 +152,7 @@ llvm::Function *FunctionASTNode::codegen()
     if (llvm::Value *ReturnVal = m_Block->codegen()) {
         Builder->CreateRet(ReturnVal);
         llvm::verifyFunction(*Func);
+        FuncPass_M->run(*Func, *FuncAnalysis_M);
         return Func;
     }
     Func->eraseFromParent();
@@ -184,6 +197,7 @@ std::unique_ptr<ExprASTNode> Parser::ParseIdentifierExpr()
             if (auto Arg = ParseExpression()) {
                 Args.push_back(std::move(Arg));
             } else {
+                GetNextToken(); // Consume Rparen
                 return nullptr;
             }
             if (CurrentToken != TOK_COMMA && CurrentToken != TOK_RPAREN) {
@@ -334,11 +348,36 @@ std::unique_ptr<FunctionASTNode> Parser::ParseTopLevelExpr()
 // Main Parser Helper Handles
 //===----------------------------------------------------------------------===//
 
-void InitializeModule()
+void InitializeModuleAndManagers()
 {
     Context = std::make_unique<llvm::LLVMContext>();
     Module = std::make_unique<llvm::Module>("Main INIT", *Context);
     Builder = std::make_unique<llvm::IRBuilder<>>(*Context);
+    Module->setDataLayout(TheJIT->getDataLayout());
+
+    // Pass Managers
+    FuncPass_M = std::make_unique<llvm::FunctionPassManager>();
+    LoopAnaysis_M = std::make_unique<llvm::LoopAnalysisManager>();
+    FuncAnalysis_M = std::make_unique<llvm::FunctionAnalysisManager>();
+    CGSCCAnalysis_M = std::make_unique<llvm::CGSCCAnalysisManager>();
+    ModuleAnalysis_M = std::make_unique<llvm::ModuleAnalysisManager>();
+    PassInstCallbacks = std::make_unique<llvm::PassInstrumentationCallbacks>();
+    StdInst = std::make_unique<llvm::StandardInstrumentations>(*Context, true);
+
+    StdInst->registerCallbacks(*PassInstCallbacks, ModuleAnalysis_M.get());
+
+    // Adding Transform Passes
+    FuncPass_M->addPass(llvm::InstCombinePass());
+    FuncPass_M->addPass(llvm::ReassociatePass());
+    FuncPass_M->addPass(llvm::GVNPass());
+    FuncPass_M->addPass(llvm::SimplifyCFGPass());
+
+    // Register Analysis Passes
+    llvm::PassBuilder PBuilder;
+    PBuilder.registerModuleAnalyses(*ModuleAnalysis_M);
+    PBuilder.registerFunctionAnalyses(*FuncAnalysis_M);
+    PBuilder.crossRegisterProxies(*LoopAnaysis_M, *FuncAnalysis_M,
+                                  *CGSCCAnalysis_M, *ModuleAnalysis_M, nullptr);
 }
 
 void HandleExtern(Parser *parser)
@@ -369,9 +408,14 @@ void HandelTopLevelExpr(Parser *parser)
 {
     if (auto FuncAST = parser->ParseTopLevelExpr()) {
         if (auto *FuncIR = FuncAST->codegen()) {
-            FuncIR->print(llvm::errs());
-            fprintf(stderr, "\n");
-            FuncIR->eraseFromParent();
+            auto ResTracker = TheJIT->getMainJITDylib().createResourceTracker();
+            auto TSModule = llvm::ThreadSafeModule(std::move(Module), std::move(Context));
+            ExitOnErr(TheJIT->addModule(std::move(TSModule), ResTracker));
+            InitializeModuleAndManagers();
+            auto ExprSymbol = ExitOnErr(TheJIT->lookup("__anon_expr"));
+            double (*FP)() = ExprSymbol.toPtr<double (*)()>();
+            fprintf(stderr, "Evaluated to %f\n", FP());
+            ExitOnErr(ResTracker->remove());
         }
     } else {
         GetNextToken();

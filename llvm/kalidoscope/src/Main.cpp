@@ -5,9 +5,14 @@
 
 int main(void)
 {
+    llvm::InitializeNativeTarget();
+    llvm::InitializeNativeTargetAsmPrinter();
+    llvm::InitializeNativeTargetAsmParser();
+
     std::string input;
     Parser parser;
-    InitializeModule();
+    InitializeModuleAndManagers();
+    getTheJIT() = std::make_unique<KaleidoscopeJIT>();
     do {
         std::cout << "read> ";
         // This input method is not the most efficient but a patch to previous

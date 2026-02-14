@@ -2,6 +2,7 @@
 
 if [[ "$1" == "fmt" ]]; then
     clang-format -i src/*.cpp
+    exit 0
 fi
 
 mkdir -p build

@@ -9,7 +9,7 @@ static std::unique_ptr<llvm::IRBuilder<>> Builder;
 static std::unique_ptr<llvm::Module> Module;
 static std::map<std::string, llvm::Value *> NamedValues;
 
-static std::unique_ptr<KaleidoscopeJIT> TheJIT;
+static std::unique_ptr<llvm::orc::KaleidoscopeJIT> TheJIT;
 static std::unique_ptr<llvm::FunctionPassManager> FuncPass_M;
 static std::unique_ptr<llvm::LoopAnalysisManager> LoopAnaysis_M;
 static std::unique_ptr<llvm::FunctionAnalysisManager> FuncAnalysis_M;
@@ -23,7 +23,8 @@ static llvm::ExitOnError ExitOnErr;
 void GetNextToken() { CurrentToken = gettok(); }
 
 std::unique_ptr<llvm::Module> getModule() { return std::move(Module); }
-std::unique_ptr<KaleidoscopeJIT> getTheJIT(){return std::move(TheJIT);}
+std::unique_ptr<llvm::orc::KaleidoscopeJIT> getTheJIT(){return std::move(TheJIT);}
+llvm::ExitOnError getExitOnError() {return ExitOnErr;}
 
 llvm::Value *LogErrorV(const char *Str)
 {
@@ -353,6 +354,7 @@ void InitializeModuleAndManagers()
     Context = std::make_unique<llvm::LLVMContext>();
     Module = std::make_unique<llvm::Module>("Main INIT", *Context);
     Builder = std::make_unique<llvm::IRBuilder<>>(*Context);
+    TheJIT = ExitOnErr(llvm::orc::KaleidoscopeJIT::Create());
     Module->setDataLayout(TheJIT->getDataLayout());
 
     // Pass Managers
@@ -408,11 +410,17 @@ void HandelTopLevelExpr(Parser *parser)
 {
     if (auto FuncAST = parser->ParseTopLevelExpr()) {
         if (auto *FuncIR = FuncAST->codegen()) {
+
+            // Track Resources
             auto ResTracker = TheJIT->getMainJITDylib().createResourceTracker();
-            auto TSModule = llvm::ThreadSafeModule(std::move(Module), std::move(Context));
+
+            auto TSModule = llvm::orc::ThreadSafeModule(std::move(Module), std::move(Context));
             ExitOnErr(TheJIT->addModule(std::move(TSModule), ResTracker));
             InitializeModuleAndManagers();
+
+            // Search for __anon_expr inside of TheJIT
             auto ExprSymbol = ExitOnErr(TheJIT->lookup("__anon_expr"));
+
             double (*FP)() = ExprSymbol.toPtr<double (*)()>();
             fprintf(stderr, "Evaluated to %f\n", FP());
             ExitOnErr(ResTracker->remove());

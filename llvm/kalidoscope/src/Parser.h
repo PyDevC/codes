@@ -26,7 +26,6 @@
 #include "llvm/Transforms/Scalar/Reassociate.h"
 #include "llvm/Transforms/Scalar/SimplifyCFG.h"
 
-// Need to look into it
 #include "../include/KaleidoscopeJIT.h"
 
 void GetNextToken();
@@ -185,4 +184,5 @@ class Parser
 
 void InitializeModuleAndManagers();
 std::unique_ptr<llvm::Module> getModule();
-std::unique_ptr<KaleidoscopeJIT> getTheJIT();
+std::unique_ptr<llvm::orc::KaleidoscopeJIT> getTheJIT();
+llvm::ExitOnError getExitOnError();

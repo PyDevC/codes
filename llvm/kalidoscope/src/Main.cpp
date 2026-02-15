@@ -11,8 +11,14 @@ int main(void)
 
     std::string input;
     Parser parser;
+
+    auto ExitOnError = getExitOnError();
+    std::unique_ptr<llvm::orc::KaleidoscopeJIT> TheJIT = getTheJIT();
+    TheJIT = ExitOnError(llvm::orc::KaleidoscopeJIT::Create());
+    if(TheJIT == nullptr){
+        exit(1);
+    }
     InitializeModuleAndManagers();
-    getTheJIT() = std::make_unique<KaleidoscopeJIT>();
     do {
         std::cout << "read> ";
         // This input method is not the most efficient but a patch to previous

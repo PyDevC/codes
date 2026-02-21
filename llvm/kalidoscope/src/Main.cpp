@@ -11,13 +11,8 @@ int main(void)
 
     std::string input;
     Parser parser;
-
-    auto ExitOnError = getExitOnError();
-    std::unique_ptr<llvm::orc::KaleidoscopeJIT> TheJIT = getTheJIT();
+    llvm::ExitOnError ExitOnError;
     TheJIT = ExitOnError(llvm::orc::KaleidoscopeJIT::Create());
-    if(TheJIT == nullptr){
-        exit(1);
-    }
     InitializeModuleAndManagers();
     do {
         std::cout << "read> ";

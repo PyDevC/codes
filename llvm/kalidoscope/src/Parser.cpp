@@ -9,7 +9,7 @@ static std::unique_ptr<llvm::IRBuilder<>> Builder;
 static std::unique_ptr<llvm::Module> Module;
 static std::map<std::string, llvm::Value *> NamedValues;
 
-static std::unique_ptr<llvm::orc::KaleidoscopeJIT> TheJIT;
+std::unique_ptr<llvm::orc::KaleidoscopeJIT> TheJIT;
 static std::unique_ptr<llvm::FunctionPassManager> FuncPass_M;
 static std::unique_ptr<llvm::LoopAnalysisManager> LoopAnaysis_M;
 static std::unique_ptr<llvm::FunctionAnalysisManager> FuncAnalysis_M;
@@ -23,8 +23,7 @@ static llvm::ExitOnError ExitOnErr;
 void GetNextToken() { CurrentToken = gettok(); }
 
 std::unique_ptr<llvm::Module> getModule() { return std::move(Module); }
-std::unique_ptr<llvm::orc::KaleidoscopeJIT> getTheJIT(){return std::move(TheJIT);}
-llvm::ExitOnError getExitOnError() {return ExitOnErr;}
+llvm::ExitOnError getExitOnError() { return ExitOnErr; }
 
 llvm::Value *LogErrorV(const char *Str)
 {
@@ -50,7 +49,7 @@ static int GetTokPrecedence()
 
 llvm::Value *NumberExprASTNode::codegen()
 {
-    return llvm::ConstantFP::get(*Context, llvm::APFloat(getNumVal()));
+    return llvm::ConstantFP::get(*Context, llvm::APFloat(m_NumberVal));
 }
 
 llvm::Value *VariableExprASTNode::codegen()
@@ -78,7 +77,7 @@ llvm::Value *BinaryExprASTNode::codegen()
     case TOK_OPERATOR_MUL:
         return Builder->CreateFMul(Lf, Rg, "multmp");
     case TOK_OPERATOR_DIV:
-        return Builder->CreateFDiv(Lf, Rg, "multmp");
+        return Builder->CreateFDiv(Lf, Rg, "divtmp");
     default:
         return LogErrorV("Invalid Binary Operator");
     };
@@ -243,8 +242,8 @@ std::unique_ptr<ExprASTNode> Parser::ParsePrimaryExpr()
     }
 }
 
-static std::unique_ptr<ExprASTNode>
-ParseBinaryOpRight(int Precedence, std::unique_ptr<ExprASTNode> Left)
+std::unique_ptr<ExprASTNode>
+Parser::ParseBinaryOpRight(int Precedence, std::unique_ptr<ExprASTNode> Left)
 {
     while (1) {
         int CurrentTokenPrecedence = GetTokPrecedence();
@@ -254,9 +253,9 @@ ParseBinaryOpRight(int Precedence, std::unique_ptr<ExprASTNode> Left)
         }
         int BinaryOp = CurrentToken;
         GetNextToken(); // Consume BinaryOp
-        Parser parser;
+
         // TODO: There is better way to do it I just don't konw yet
-        auto Right = parser.ParsePrimaryExpr();
+        auto Right = ParsePrimaryExpr();
         if (!Right) {
             return nullptr;
         }
@@ -354,7 +353,6 @@ void InitializeModuleAndManagers()
     Context = std::make_unique<llvm::LLVMContext>();
     Module = std::make_unique<llvm::Module>("Main INIT", *Context);
     Builder = std::make_unique<llvm::IRBuilder<>>(*Context);
-    TheJIT = ExitOnErr(llvm::orc::KaleidoscopeJIT::Create());
     Module->setDataLayout(TheJIT->getDataLayout());
 
     // Pass Managers
@@ -414,7 +412,8 @@ void HandelTopLevelExpr(Parser *parser)
             // Track Resources
             auto ResTracker = TheJIT->getMainJITDylib().createResourceTracker();
 
-            auto TSModule = llvm::orc::ThreadSafeModule(std::move(Module), std::move(Context));
+            auto TSModule = llvm::orc::ThreadSafeModule(std::move(Module),
+                                                        std::move(Context));
             ExitOnErr(TheJIT->addModule(std::move(TSModule), ResTracker));
             InitializeModuleAndManagers();
 

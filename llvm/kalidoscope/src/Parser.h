@@ -173,6 +173,7 @@ class Parser
     std::unique_ptr<ExprASTNode> ParseParenExpr();
     std::unique_ptr<ExprASTNode> ParseIdentifierExpr();
     std::unique_ptr<ExprASTNode> ParsePrimaryExpr();
+    std::unique_ptr<ExprASTNode> ParseBinaryOpRight(int, std::unique_ptr<ExprASTNode>);
     std::unique_ptr<ExprASTNode> ParseExpression();
     std::unique_ptr<PrototypeASTNode> ParsePrototype();
     std::unique_ptr<FunctionASTNode> ParseFunction();
@@ -184,5 +185,5 @@ class Parser
 
 void InitializeModuleAndManagers();
 std::unique_ptr<llvm::Module> getModule();
-std::unique_ptr<llvm::orc::KaleidoscopeJIT> getTheJIT();
+extern std::unique_ptr<llvm::orc::KaleidoscopeJIT> TheJIT;
 llvm::ExitOnError getExitOnError();

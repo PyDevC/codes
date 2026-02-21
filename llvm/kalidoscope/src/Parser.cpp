@@ -83,9 +83,22 @@ llvm::Value *BinaryExprASTNode::codegen()
     };
 }
 
+llvm::Function *getFunction(std::string Name)
+{
+    if (auto *F = Module->getFunction(Name)) {
+        return F;
+    }
+
+    auto FExists = FunctionProtos.find(Name);
+    if (FExists != FunctionProtos.end()) {
+        return FExists->second->codegen();
+    }
+    return nullptr;
+}
+
 llvm::Value *CallExprASTNode::codegen()
 {
-    llvm::Function *CalleeF = Module->getFunction(m_Callee);
+    llvm::Function *CalleeF = getFunction(m_Callee);
     if (!CalleeF) {
         return LogErrorV("Unknown Function call");
     }
@@ -126,11 +139,9 @@ llvm::Function *PrototypeASTNode::codegen()
 
 llvm::Function *FunctionASTNode::codegen()
 {
-    llvm::Function *Func = Module->getFunction(m_Prototype->getName());
-
-    if (!Func) {
-        Func = m_Prototype->codegen();
-    }
+    auto &P = *m_Prototype;
+    FunctionProtos[m_Prototype->getName()] = std::move(m_Prototype);
+    llvm::Function *Func = getFunction(P.getName());
 
     if (!Func) {
         return nullptr;
@@ -386,6 +397,7 @@ void HandleExtern(Parser *parser)
         if (auto *FuncIR = ProtoAST->codegen()) {
             FuncIR->print(llvm::errs());
             fprintf(stderr, "\n");
+            FunctionProtos[ProtoAST->getName()] = std::move(ProtoAST);
         }
     } else {
         GetNextToken();
@@ -396,8 +408,12 @@ void HandleDefinition(Parser *parser)
 {
     if (auto FuncAST = parser->ParseFunction()) {
         if (auto *FuncIR = FuncAST->codegen()) {
+            fprintf(stderr, "Read function definition:\n");
             FuncIR->print(llvm::errs());
             fprintf(stderr, "\n");
+            ExitOnErr(TheJIT->addModule(llvm::orc::ThreadSafeModule(
+                std::move(Module), std::move(Context))));
+            InitializeModuleAndManagers();
         }
     } else {
         GetNextToken();

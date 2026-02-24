@@ -44,3 +44,4 @@ target_link_libraries(Kalido PRIVATE
 
 # Specifically add system dependencies (the --system-libs part)
 target_link_libraries(Kalido PRIVATE "${LLVM_SYSTEM_LIBS}")
+set_target_properties(Kalido PROPERTIES ENABLE_EXPORTS ON)

@@ -187,3 +187,12 @@ void InitializeModuleAndManagers();
 std::unique_ptr<llvm::Module> getModule();
 extern std::unique_ptr<llvm::orc::KaleidoscopeJIT> TheJIT;
 llvm::ExitOnError getExitOnError();
+
+#ifdef _WIN32
+#define DLLEXPORT __declspec(dllexport)
+#else
+#define DLLEXPORT
+#endif
+
+extern "C" DLLEXPORT double putchard(double X);
+extern "C" DLLEXPORT double printd(double X);

@@ -149,6 +149,20 @@ TokenType gettok()
         case '*': {
             return TOK_OPERATOR_MUL;
         } break;
+        case '>': {
+            LastChar = getcharnow();
+            if (LastChar == '=') {
+                return TOK_OPERATOR_GTE;
+            }
+            return TOK_OPERATOR_GT;
+        } break;
+        case '<': {
+            LastChar = getcharnow();
+            if (LastChar == '=') {
+                return TOK_OPERATOR_LTE;
+            }
+            return TOK_OPERATOR_LT;
+        } break;
         case '/': {
             return TOK_OPERATOR_DIV;
         } break;

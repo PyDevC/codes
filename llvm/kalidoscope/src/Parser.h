@@ -4,18 +4,18 @@
 #include <string>
 #include <vector>
 
-#include "llvm/IR/IRBuilder.h"
 #include "llvm/ADT/APFloat.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/IR/BasicBlock.h"
 #include "llvm/IR/Constants.h"
 #include "llvm/IR/DerivedTypes.h"
 #include "llvm/IR/Function.h"
+#include "llvm/IR/IRBuilder.h"
 #include "llvm/IR/LLVMContext.h"
 #include "llvm/IR/Module.h"
+#include "llvm/IR/PassManager.h"
 #include "llvm/IR/Type.h"
 #include "llvm/IR/Verifier.h"
-#include "llvm/IR/PassManager.h"
 #include "llvm/Passes/PassBuilder.h"
 #include "llvm/Passes/StandardInstrumentations.h"
 #include "llvm/Support/TargetSelect.h"
@@ -30,7 +30,7 @@
 
 void GetNextToken();
 
-llvm::Value *LogErrorV(const char* Str);
+llvm::Value *LogErrorV(const char *Str);
 
 // Base Class for all Nodes
 // List of Different types of Nodes:
@@ -52,7 +52,7 @@ class ExprASTNode : public ASTNode
   public:
     ExprASTNode() {}
     virtual ~ExprASTNode() override {}
-    virtual llvm::Value* codegen() = 0;
+    virtual llvm::Value *codegen() = 0;
 };
 
 class NumberExprASTNode : public ExprASTNode
@@ -121,7 +121,24 @@ class CallExprASTNode : public ExprASTNode
     {
     }
     ~CallExprASTNode() override {}
-    llvm::Value* codegen() override;
+    llvm::Value *codegen() override;
+};
+
+class IfExprASTNode : public ExprASTNode
+{
+  private:
+    std::unique_ptr<ExprASTNode> m_Condition, m_ThenExpr, m_ElseExpr;
+
+  public:
+    IfExprASTNode(std::unique_ptr<ExprASTNode> condition,
+                  std::unique_ptr<ExprASTNode> then_expr,
+                  std::unique_ptr<ExprASTNode> else_expr)
+        : m_Condition(std::move(condition)), m_ThenExpr(std::move(then_expr)),
+          m_ElseExpr(std::move(else_expr))
+    {
+    }
+    ~IfExprASTNode() override {};
+    llvm::Value *codegen() override;
 };
 
 class BlockASTNode : public ASTNode
@@ -142,9 +159,9 @@ class PrototypeASTNode : public ASTNode
     {
     }
 
-    std::string getName() const {return m_PrototypeName;}
+    std::string getName() const { return m_PrototypeName; }
     ~PrototypeASTNode() override {}
-    llvm::Function* codegen();
+    llvm::Function *codegen();
 };
 
 class FunctionASTNode : public ASTNode
@@ -160,7 +177,7 @@ class FunctionASTNode : public ASTNode
     {
     }
     ~FunctionASTNode() override {}
-    llvm::Function* codegen();
+    llvm::Function *codegen();
 };
 
 class Parser
@@ -173,7 +190,9 @@ class Parser
     std::unique_ptr<ExprASTNode> ParseParenExpr();
     std::unique_ptr<ExprASTNode> ParseIdentifierExpr();
     std::unique_ptr<ExprASTNode> ParsePrimaryExpr();
-    std::unique_ptr<ExprASTNode> ParseBinaryOpRight(int, std::unique_ptr<ExprASTNode>);
+    std::unique_ptr<ExprASTNode> ParseIfExpr();
+    std::unique_ptr<ExprASTNode>
+    ParseBinaryOpRight(int, std::unique_ptr<ExprASTNode>);
     std::unique_ptr<ExprASTNode> ParseExpression();
     std::unique_ptr<PrototypeASTNode> ParsePrototype();
     std::unique_ptr<FunctionASTNode> ParseFunction();

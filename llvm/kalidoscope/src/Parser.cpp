@@ -61,6 +61,50 @@ llvm::Value *VariableExprASTNode::codegen()
     return V;
 }
 
+llvm::Value *IfExprASTNode::codegen(){
+    llvm::Value *Cond = m_Condition->codegen();
+    if(!Cond){
+        return nullptr;
+    }
+
+    Cond = Builder->CreateFCmpONE(Cond, llvm::ConstantFP::get(*Context, llvm::APFloat(0.0)), "ifcondition");
+    llvm::Function* func = Builder->GetInsertBlock()->getParent();
+
+    llvm::BasicBlock* ThenBB = llvm::BasicBlock::Create(*Context, "then", func);
+    llvm::BasicBlock* ElseBB = llvm::BasicBlock::Create(*Context, "else");
+    llvm::BasicBlock* MergeBB = llvm::BasicBlock::Create(*Context, "ifcont");
+
+    Builder->CreateCondBr(Cond, ThenBB, ElseBB);
+    Builder->SetInsertPoint(ThenBB);
+
+    llvm::Value* Then = m_ThenExpr->codegen();
+    if(!Then){
+        return nullptr;
+    }
+
+    Builder->CreateBr(MergeBB);
+    ThenBB = Builder->GetInsertBlock();
+
+    func->insert(func->end(), ElseBB);
+    Builder->SetInsertPoint(ElseBB);
+
+    llvm::Value* Else = m_ElseExpr->codegen();
+    if(!Else){
+        return nullptr;
+    }
+
+    Builder->CreateBr(MergeBB);
+    ElseBB = Builder->GetInsertBlock();
+
+    func->insert(func->end(), MergeBB);
+    Builder->SetInsertPoint(MergeBB);
+    llvm::PHINode* phi = Builder->CreatePHI(llvm::Type::getDoubleTy(*Context), 2, "iftmp");
+    phi->addIncoming(Then, ThenBB);
+    phi->addIncoming(Else, ElseBB);
+
+    return phi;
+}
+
 llvm::Value *BinaryExprASTNode::codegen()
 {
     llvm::Value *Lf = m_Left->codegen();
@@ -231,6 +275,50 @@ std::unique_ptr<ExprASTNode> Parser::ParseIdentifierExpr()
     }
 }
 
+std::unique_ptr<ExprASTNode> Parser::ParseIfExpr(){
+    GetNextToken(); // Consume IF keyword
+
+    auto Cond = ParseExpression();
+    if(!Cond){
+        std::cout << "Syntax Error: if expressions require a condition.\n";
+        exit(1);
+    }
+
+    if(CurrentToken == TOK_KEYWORD){
+        Keywords keywords;
+        Keyword keytoken = keywords.KeywordToCode(getIdentifierStr().c_str(), getIdentifierStr().size());
+        if(keytoken != KEYWORD_THEN){
+            LogError("Syntax Error: missing then keyword after if expression condition.\n");
+        }
+    }
+
+    GetNextToken(); // Consume then keyword
+    auto ThenExpr = ParseExpression();
+    if(!ThenExpr){
+        std::cout << "Syntax Error: expected expression after then keyword.\n";
+        exit(1);
+    }
+
+    if(CurrentToken == TOK_KEYWORD){
+        Keywords keywords;
+        Keyword keytoken = keywords.KeywordToCode(getIdentifierStr().c_str(), getIdentifierStr().size());
+        if(keytoken != KEYWORD_ELSE){
+            LogError("Syntax Error: missing else keyword after then expression condition.\n");
+        }
+    } else {
+        return std::make_unique<IfExprASTNode>(std::move(Cond), std::move(ThenExpr), nullptr);
+    }
+
+    GetNextToken(); // Consume else keyword
+    auto ElseExpr = ParseExpression();
+    if(!ElseExpr){
+        std::cout << "Syntax Error: expected expression after else keyword.\n";
+        exit(1);
+    }
+
+    return std::make_unique<IfExprASTNode>(std::move(Cond), std::move(ThenExpr), std::move(ElseExpr));
+}
+
 std::unique_ptr<ExprASTNode> Parser::ParsePrimaryExpr()
 {
     switch (CurrentToken) {
@@ -243,6 +331,20 @@ std::unique_ptr<ExprASTNode> Parser::ParsePrimaryExpr()
     case TOK_LPAREN: {
         return ParseParenExpr();
     } break;
+    case TOK_KEYWORD:{
+        Keywords keywords;
+        // We are practically repeating exactly same code here and can change it
+        // but not righting performance code so leave it.
+        Keyword keytoken = keywords.KeywordToCode(getIdentifierStr().c_str(),
+                                                  getIdentifierStr().size());
+        switch (keytoken) {
+                case KEYWORD_IF:
+                    return ParseIfExpr();
+                default:
+                    std::cout << "Error: Keyword Not implemented.\n";
+                    exit(1);
+            };
+    }break;
     case EOF: {
         return nullptr;
     };
@@ -474,12 +576,14 @@ void Parser::ParseMain()
     };
 }
 
-extern "C" DLLEXPORT double putchard(double X){
+extern "C" DLLEXPORT double putchard(double X)
+{
     fputc((char)X, stderr);
     return 0.0;
 }
 
-extern "C" DLLEXPORT double printd(double X){
+extern "C" DLLEXPORT double printd(double X)
+{
     fprintf(stderr, "%f\n", X);
     return 0.0;
 }

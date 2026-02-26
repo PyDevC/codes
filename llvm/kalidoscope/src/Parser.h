@@ -141,6 +141,29 @@ class IfExprASTNode : public ExprASTNode
     llvm::Value *codegen() override;
 };
 
+class ForExprASTNode : public ExprASTNode
+{
+  private:
+    std::string m_VarName;
+    std::unique_ptr<ExprASTNode> m_Init, m_Condition, m_Body;
+    std::unique_ptr<ExprASTNode> m_Step;
+
+  public:
+    ForExprASTNode(std::string &varname, 
+                   std::unique_ptr<ExprASTNode> init,
+                   std::unique_ptr<ExprASTNode> condition,
+                   std::unique_ptr<ExprASTNode> step,
+                   std::unique_ptr<ExprASTNode> body)
+        : m_VarName(varname), m_Init(std::move(init)), m_Condition(std::move(condition)),
+          m_Step(std::move(step)), m_Body(std::move(body))
+    {
+    }
+
+    ~ForExprASTNode() override {};
+
+    llvm::Value *codegen() override;
+};
+
 class BlockASTNode : public ASTNode
 {
   private:
@@ -191,6 +214,7 @@ class Parser
     std::unique_ptr<ExprASTNode> ParseIdentifierExpr();
     std::unique_ptr<ExprASTNode> ParsePrimaryExpr();
     std::unique_ptr<ExprASTNode> ParseIfExpr();
+    std::unique_ptr<ExprASTNode> ParseForExpr();
     std::unique_ptr<ExprASTNode>
     ParseBinaryOpRight(int, std::unique_ptr<ExprASTNode>);
     std::unique_ptr<ExprASTNode> ParseExpression();

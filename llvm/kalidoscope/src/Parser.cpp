@@ -61,24 +61,27 @@ llvm::Value *VariableExprASTNode::codegen()
     return V;
 }
 
-llvm::Value *IfExprASTNode::codegen(){
+llvm::Value *IfExprASTNode::codegen()
+{
     llvm::Value *Cond = m_Condition->codegen();
-    if(!Cond){
+    if (!Cond) {
         return nullptr;
     }
 
-    Cond = Builder->CreateFCmpONE(Cond, llvm::ConstantFP::get(*Context, llvm::APFloat(0.0)), "ifcondition");
-    llvm::Function* func = Builder->GetInsertBlock()->getParent();
+    Cond = Builder->CreateFCmpONE(
+        Cond, llvm::ConstantFP::get(*Context, llvm::APFloat(0.0)),
+        "ifcondition");
+    llvm::Function *func = Builder->GetInsertBlock()->getParent();
 
-    llvm::BasicBlock* ThenBB = llvm::BasicBlock::Create(*Context, "then", func);
-    llvm::BasicBlock* ElseBB = llvm::BasicBlock::Create(*Context, "else");
-    llvm::BasicBlock* MergeBB = llvm::BasicBlock::Create(*Context, "ifcont");
+    llvm::BasicBlock *ThenBB = llvm::BasicBlock::Create(*Context, "then", func);
+    llvm::BasicBlock *ElseBB = llvm::BasicBlock::Create(*Context, "else");
+    llvm::BasicBlock *MergeBB = llvm::BasicBlock::Create(*Context, "ifcont");
 
     Builder->CreateCondBr(Cond, ThenBB, ElseBB);
     Builder->SetInsertPoint(ThenBB);
 
-    llvm::Value* Then = m_ThenExpr->codegen();
-    if(!Then){
+    llvm::Value *Then = m_ThenExpr->codegen();
+    if (!Then) {
         return nullptr;
     }
 
@@ -88,8 +91,8 @@ llvm::Value *IfExprASTNode::codegen(){
     func->insert(func->end(), ElseBB);
     Builder->SetInsertPoint(ElseBB);
 
-    llvm::Value* Else = m_ElseExpr->codegen();
-    if(!Else){
+    llvm::Value *Else = m_ElseExpr->codegen();
+    if (!Else) {
         return nullptr;
     }
 
@@ -98,7 +101,8 @@ llvm::Value *IfExprASTNode::codegen(){
 
     func->insert(func->end(), MergeBB);
     Builder->SetInsertPoint(MergeBB);
-    llvm::PHINode* phi = Builder->CreatePHI(llvm::Type::getDoubleTy(*Context), 2, "iftmp");
+    llvm::PHINode *phi =
+        Builder->CreatePHI(llvm::Type::getDoubleTy(*Context), 2, "iftmp");
     phi->addIncoming(Then, ThenBB);
     phi->addIncoming(Else, ElseBB);
 
@@ -275,48 +279,106 @@ std::unique_ptr<ExprASTNode> Parser::ParseIdentifierExpr()
     }
 }
 
-std::unique_ptr<ExprASTNode> Parser::ParseIfExpr(){
+std::unique_ptr<ExprASTNode> Parser::ParseIfExpr()
+{
     GetNextToken(); // Consume IF keyword
 
     auto Cond = ParseExpression();
-    if(!Cond){
+    if (!Cond) {
         std::cout << "Syntax Error: if expressions require a condition.\n";
         exit(1);
     }
 
-    if(CurrentToken == TOK_KEYWORD){
+    if (CurrentToken == TOK_KEYWORD) {
         Keywords keywords;
-        Keyword keytoken = keywords.KeywordToCode(getIdentifierStr().c_str(), getIdentifierStr().size());
-        if(keytoken != KEYWORD_THEN){
-            LogError("Syntax Error: missing then keyword after if expression condition.\n");
+        Keyword keytoken = keywords.KeywordToCode(getIdentifierStr().c_str(),
+                                                  getIdentifierStr().size());
+        if (keytoken != KEYWORD_THEN) {
+            LogError("Syntax Error: missing then keyword after if expression "
+                     "condition.\n");
         }
     }
 
     GetNextToken(); // Consume then keyword
     auto ThenExpr = ParseExpression();
-    if(!ThenExpr){
+    if (!ThenExpr) {
         std::cout << "Syntax Error: expected expression after then keyword.\n";
         exit(1);
     }
 
-    if(CurrentToken == TOK_KEYWORD){
+    if (CurrentToken == TOK_KEYWORD) {
         Keywords keywords;
-        Keyword keytoken = keywords.KeywordToCode(getIdentifierStr().c_str(), getIdentifierStr().size());
-        if(keytoken != KEYWORD_ELSE){
-            LogError("Syntax Error: missing else keyword after then expression condition.\n");
+        Keyword keytoken = keywords.KeywordToCode(getIdentifierStr().c_str(),
+                                                  getIdentifierStr().size());
+        if (keytoken != KEYWORD_ELSE) {
+            LogError("Syntax Error: missing else keyword after then expression "
+                     "condition.\n");
         }
     } else {
-        return std::make_unique<IfExprASTNode>(std::move(Cond), std::move(ThenExpr), nullptr);
+        return std::make_unique<IfExprASTNode>(std::move(Cond),
+                                               std::move(ThenExpr), nullptr);
     }
 
     GetNextToken(); // Consume else keyword
     auto ElseExpr = ParseExpression();
-    if(!ElseExpr){
+    if (!ElseExpr) {
         std::cout << "Syntax Error: expected expression after else keyword.\n";
         exit(1);
     }
 
-    return std::make_unique<IfExprASTNode>(std::move(Cond), std::move(ThenExpr), std::move(ElseExpr));
+    return std::make_unique<IfExprASTNode>(std::move(Cond), std::move(ThenExpr),
+                                           std::move(ElseExpr));
+}
+
+std::unique_ptr<ExprASTNode> Parser::ParseForExpr(){
+    GetNextToken(); // Consume for keyword
+    
+    if(CurrentToken != TOK_IDENTIFIER){
+        LogError("Syntax Error: Init should be an Identifier.");
+    }
+
+    std::string IdentName = getIdentifierStr();
+
+    auto Init = ParseExpression();
+    if(!Init){
+        LogError("Syntax Error: No expression after for keyword.");
+    }
+
+    if(CurrentToken != TOK_COMMA){
+        LogError("Syntax Error: comma missing after init condition in for loop.");
+    }
+
+    GetNextToken(); // Consume COMMA
+
+    auto Cond = ParseExpression();
+    if(!Cond){
+        LogError("Syntax Error: No expression after init for 'for' loop.");
+    }
+
+    if(CurrentToken != TOK_COMMA){
+        LogError("Syntax Error: comma missing after terminating condition in for loop.");
+    }
+    
+    auto Step = ParsePrimaryExpr();
+    if(!Step){
+        LogError("Syntax Error: No step after terminating condition in 'for' loop.");
+    }
+
+    if(CurrentToken == TOK_KEYWORD){
+        Keywords keywords;
+        Keyword keytoken = keywords.KeywordToCode(getIdentifierStr().c_str(),
+                                                  getIdentifierStr().size());
+        if(keytoken != KEYWORD_IN){
+            LogError("Syntax Error: Expected in keyword after step expression of for loop.");
+        }
+    }
+
+    auto Body = ParseExpression();
+    if(!Body){
+        LogError("Syntax Error: No body for the for loop");
+    }
+
+    return std::make_unique<ForExprASTNode>(IdentName, std::move(Init), std::move(Cond), std::move(Step), std::move(Body));
 }
 
 std::unique_ptr<ExprASTNode> Parser::ParsePrimaryExpr()
@@ -331,20 +393,20 @@ std::unique_ptr<ExprASTNode> Parser::ParsePrimaryExpr()
     case TOK_LPAREN: {
         return ParseParenExpr();
     } break;
-    case TOK_KEYWORD:{
+    case TOK_KEYWORD: {
         Keywords keywords;
         // We are practically repeating exactly same code here and can change it
         // but not righting performance code so leave it.
         Keyword keytoken = keywords.KeywordToCode(getIdentifierStr().c_str(),
                                                   getIdentifierStr().size());
         switch (keytoken) {
-                case KEYWORD_IF:
-                    return ParseIfExpr();
-                default:
-                    std::cout << "Error: Keyword Not implemented.\n";
-                    exit(1);
-            };
-    }break;
+        case KEYWORD_IF:
+            return ParseIfExpr();
+        default:
+            std::cout << "Error: Keyword Not implemented.\n";
+            exit(1);
+        };
+    } break;
     case EOF: {
         return nullptr;
     };

@@ -149,13 +149,13 @@ class ForExprASTNode : public ExprASTNode
     std::unique_ptr<ExprASTNode> m_Step;
 
   public:
-    ForExprASTNode(std::string &varname, 
-                   std::unique_ptr<ExprASTNode> init,
+    ForExprASTNode(std::string &varname, std::unique_ptr<ExprASTNode> init,
                    std::unique_ptr<ExprASTNode> condition,
                    std::unique_ptr<ExprASTNode> step,
                    std::unique_ptr<ExprASTNode> body)
-        : m_VarName(varname), m_Init(std::move(init)), m_Condition(std::move(condition)),
-          m_Step(std::move(step)), m_Body(std::move(body))
+        : m_VarName(varname), m_Init(std::move(init)),
+          m_Condition(std::move(condition)), m_Step(std::move(step)),
+          m_Body(std::move(body))
     {
     }
 

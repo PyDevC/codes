@@ -32,10 +32,9 @@ llvm::Value *LogErrorV(const char *Str)
 }
 
 static std::map<char, int> BinaryOpPrecedence = {
-    {TOK_OPERATOR_ADD, 10},
-    {TOK_OPERATOR_SUB, 10},
-    {TOK_OPERATOR_MUL, 20},
-    {TOK_OPERATOR_DIV, 20},
+    {TOK_OPERATOR_ADD, 10}, {TOK_OPERATOR_SUB, 10}, {TOK_OPERATOR_MUL, 20},
+    {TOK_OPERATOR_DIV, 20}, {TOK_OPERATOR_LT, 30},  {TOK_OPERATOR_GT, 30},
+    {TOK_OPERATOR_LTE, 30}, {TOK_OPERATOR_GTE, 30},
 };
 
 static int GetTokPrecedence()
@@ -109,6 +108,68 @@ llvm::Value *IfExprASTNode::codegen()
     return phi;
 }
 
+llvm::Value *ForExprASTNode::codegen()
+{
+    llvm::Value *Init = m_Init->codegen();
+    if (!Init) {
+        return nullptr;
+    }
+
+    llvm::Function *func = Builder->GetInsertBlock()->getParent();
+    llvm::BasicBlock *PreHeaderBB = Builder->GetInsertBlock();
+    llvm::BasicBlock *LoopBB = llvm::BasicBlock::Create(*Context, "loop", func);
+
+    Builder->CreateBr(LoopBB);
+    Builder->SetInsertPoint(LoopBB);
+
+    llvm::PHINode *variable =
+        Builder->CreatePHI(llvm::Type::getDoubleTy(*Context), 2, m_VarName);
+    variable->addIncoming(Init, PreHeaderBB);
+
+    llvm::Value* OldVal = NamedValues[m_VarName];
+    NamedValues[m_VarName] = variable;
+
+    llvm::Value *Body = m_Body->codegen();
+    if (!Body) {
+        return nullptr;
+    }
+
+    llvm::Value *Step = nullptr;
+    if(m_Step) {
+        Step = m_Step->codegen();
+        if(!Step){
+            return nullptr;
+        } 
+    } else {
+            Step = llvm::ConstantFP::get(*Context, llvm::APFloat(1.0));
+    }
+
+    llvm::Value* NextVar = Builder->CreateFAdd(variable, Step, "nextval");
+
+    llvm::Value* EndCond = m_Condition->codegen();
+    if(!EndCond){
+        return nullptr;
+    }
+
+    EndCond = Builder->CreateFCmpONE(EndCond, llvm::ConstantFP::get(*Context, llvm::APFloat(0.0)), "loopcond");
+
+    llvm::BasicBlock* LoopEndBB = Builder->GetInsertBlock();
+    llvm::BasicBlock* AfterBB = llvm::BasicBlock::Create(*Context, "afterloop", func);
+
+    Builder->CreateCondBr(EndCond, LoopBB, AfterBB);
+    Builder->SetInsertPoint(AfterBB);
+
+    variable->addIncoming(NextVar, LoopEndBB);
+
+    if(OldVal){
+        NamedValues[m_VarName] = OldVal;
+    } else {
+        NamedValues.erase(m_VarName);
+    }
+
+    return llvm::Constant::getNullValue(llvm::Type::getDoubleTy(*Context));
+}
+
 llvm::Value *BinaryExprASTNode::codegen()
 {
     llvm::Value *Lf = m_Left->codegen();
@@ -126,6 +187,18 @@ llvm::Value *BinaryExprASTNode::codegen()
         return Builder->CreateFMul(Lf, Rg, "multmp");
     case TOK_OPERATOR_DIV:
         return Builder->CreateFDiv(Lf, Rg, "divtmp");
+    case TOK_OPERATOR_LT:
+        Lf = Builder->CreateFCmpULT(Lf, Rg, "lttmp");
+        return Builder->CreateUIToFP(Lf, llvm::Type::getDoubleTy(*Context), "booltmp");
+    case TOK_OPERATOR_LTE:
+        Lf = Builder->CreateFCmpULT(Lf, Rg, "ltetmp");
+        return Builder->CreateUIToFP(Lf, llvm::Type::getDoubleTy(*Context), "booltmp");
+    case TOK_OPERATOR_GT:
+        Lf = Builder->CreateFCmpULT(Lf, Rg, "gttmp");
+        return Builder->CreateUIToFP(Lf, llvm::Type::getDoubleTy(*Context), "booltmp");
+    case TOK_OPERATOR_GTE:
+        Lf = Builder->CreateFCmpULT(Lf, Rg, "gtetmp");
+        return Builder->CreateUIToFP(Lf, llvm::Type::getDoubleTy(*Context), "booltmp");
     default:
         return LogErrorV("Invalid Binary Operator");
     };
@@ -330,55 +403,73 @@ std::unique_ptr<ExprASTNode> Parser::ParseIfExpr()
                                            std::move(ElseExpr));
 }
 
-std::unique_ptr<ExprASTNode> Parser::ParseForExpr(){
+std::unique_ptr<ExprASTNode> Parser::ParseForExpr()
+{
     GetNextToken(); // Consume for keyword
-    
-    if(CurrentToken != TOK_IDENTIFIER){
+
+    if (CurrentToken != TOK_IDENTIFIER) {
         LogError("Syntax Error: Init should be an Identifier.");
     }
 
     std::string IdentName = getIdentifierStr();
+    GetNextToken(); // Consume Identifier
+
+    if (CurrentToken != TOK_EQUAL) {
+        LogError("Syntax Error: no assignment to the Identifier.");
+    }
+
+    GetNextToken(); // Consume EQUAL
 
     auto Init = ParseExpression();
-    if(!Init){
+    if (!Init) {
         LogError("Syntax Error: No expression after for keyword.");
     }
 
-    if(CurrentToken != TOK_COMMA){
-        LogError("Syntax Error: comma missing after init condition in for loop.");
+    if (CurrentToken != TOK_COMMA) {
+        LogError(
+            "Syntax Error: comma missing after init condition in for loop.");
     }
 
     GetNextToken(); // Consume COMMA
 
     auto Cond = ParseExpression();
-    if(!Cond){
+    if (!Cond) {
         LogError("Syntax Error: No expression after init for 'for' loop.");
     }
 
-    if(CurrentToken != TOK_COMMA){
-        LogError("Syntax Error: comma missing after terminating condition in for loop.");
-    }
-    
-    auto Step = ParsePrimaryExpr();
-    if(!Step){
-        LogError("Syntax Error: No step after terminating condition in 'for' loop.");
+    if (CurrentToken != TOK_COMMA) {
+        LogError("Syntax Error: comma missing after terminating condition in "
+                 "for loop.");
     }
 
-    if(CurrentToken == TOK_KEYWORD){
+    GetNextToken(); // Consume COMMA
+
+    auto Step = ParsePrimaryExpr();
+    if (!Step) {
+        LogError(
+            "Syntax Error: No step after terminating condition in 'for' loop.");
+    }
+
+    if (CurrentToken == TOK_KEYWORD) {
         Keywords keywords;
         Keyword keytoken = keywords.KeywordToCode(getIdentifierStr().c_str(),
                                                   getIdentifierStr().size());
-        if(keytoken != KEYWORD_IN){
-            LogError("Syntax Error: Expected in keyword after step expression of for loop.");
+        if (keytoken != KEYWORD_IN) {
+            LogError("Syntax Error: Expected in keyword after step expression "
+                     "of for loop.");
         }
     }
 
+    GetNextToken(); // Consume IN
+
     auto Body = ParseExpression();
-    if(!Body){
+    if (!Body) {
         LogError("Syntax Error: No body for the for loop");
     }
 
-    return std::make_unique<ForExprASTNode>(IdentName, std::move(Init), std::move(Cond), std::move(Step), std::move(Body));
+    return std::make_unique<ForExprASTNode>(IdentName, std::move(Init),
+                                            std::move(Cond), std::move(Step),
+                                            std::move(Body));
 }
 
 std::unique_ptr<ExprASTNode> Parser::ParsePrimaryExpr()
@@ -402,6 +493,8 @@ std::unique_ptr<ExprASTNode> Parser::ParsePrimaryExpr()
         switch (keytoken) {
         case KEYWORD_IF:
             return ParseIfExpr();
+        case KEYWORD_FOR:
+            return ParseForExpr();
         default:
             std::cout << "Error: Keyword Not implemented.\n";
             exit(1);

@@ -47,6 +47,7 @@ enum TokenType {
     TOK_OPERATOR_GT,
     TOK_OPERATOR_LTE,
     TOK_OPERATOR_GTE,
+    TOK_EQUAL,
     TOK_LPAREN,
     TOK_RPAREN,
     TOK_COMMA,

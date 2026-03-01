@@ -37,6 +37,8 @@ llvm_map_components_to_libnames(llvm_libs core orcjit native)
 
 # 5. Link everything
 # This handles --ldflags and --system-libs automatically via the LLVM variables
+target_compile_options(Kalido PUBLIC -fsanitize=address -fno-omit-frame-pointer -g)
+target_link_options(Kalido PUBLIC -fsanitize=address)
 target_link_libraries(Kalido PRIVATE 
     ${llvm_libs}
     ${LLVM_AVAILABLE_LIBS} # Optional: ensures all discovered LLVM libs are available

@@ -2,4 +2,4 @@
 
 #include <iostream>
 
-void LogError(const char* Str);
+void LogError(const char *Str);

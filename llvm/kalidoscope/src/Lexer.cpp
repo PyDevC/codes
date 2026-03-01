@@ -177,6 +177,9 @@ TokenType gettok()
         } break;
         case ';': {
             return TOK_SEMICOLON;
+        case '=': {
+            return TOK_EQUAL;
+        } break;
         } break;
         default: {
         }

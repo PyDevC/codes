@@ -191,13 +191,13 @@ llvm::Value *BinaryExprASTNode::codegen()
         Lf = Builder->CreateFCmpULT(Lf, Rg, "lttmp");
         return Builder->CreateUIToFP(Lf, llvm::Type::getDoubleTy(*Context), "booltmp");
     case TOK_OPERATOR_LTE:
-        Lf = Builder->CreateFCmpULT(Lf, Rg, "ltetmp");
+        Lf = Builder->CreateFCmpULE(Lf, Rg, "ltetmp");
         return Builder->CreateUIToFP(Lf, llvm::Type::getDoubleTy(*Context), "booltmp");
     case TOK_OPERATOR_GT:
-        Lf = Builder->CreateFCmpULT(Lf, Rg, "gttmp");
+        Lf = Builder->CreateFCmpUGT(Lf, Rg, "gttmp");
         return Builder->CreateUIToFP(Lf, llvm::Type::getDoubleTy(*Context), "booltmp");
     case TOK_OPERATOR_GTE:
-        Lf = Builder->CreateFCmpULT(Lf, Rg, "gtetmp");
+        Lf = Builder->CreateFCmpUGE(Lf, Rg, "gtetmp");
         return Builder->CreateUIToFP(Lf, llvm::Type::getDoubleTy(*Context), "booltmp");
     default:
         return LogErrorV("Invalid Binary Operator");
@@ -734,11 +734,11 @@ void Parser::ParseMain()
 extern "C" DLLEXPORT double putchard(double X)
 {
     fputc((char)X, stderr);
-    return 0.0;
+    return 1.0;
 }
 
 extern "C" DLLEXPORT double printd(double X)
 {
     fprintf(stderr, "%f\n", X);
-    return 0.0;
+    return 1.0;
 }

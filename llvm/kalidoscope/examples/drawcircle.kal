@@ -1,0 +1,5 @@
+extern putchard(d)
+
+function printdensity(d) if d > 100 then putchard(32) else if d > 64 then putchard(46) else if d > 36 then putchard(43) else putchard(42)
+
+function draw(x, y) if y > 20 then 0 else if x > 40 then if putchard(10) >= 0 then draw(0, y + 1) else 0 else if printdensity((x-20)*(x-20) + (y-10)*2*(y-10)*2) >= 0 then draw(x + 1, y) else 0

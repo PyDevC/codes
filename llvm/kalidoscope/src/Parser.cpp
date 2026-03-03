@@ -1,5 +1,6 @@
 #include "Parser.h"
 #include "Errors.h"
+#include "Target.h"
 #include "Lexer.h"
 #include <map>
 
@@ -802,9 +803,6 @@ void HandleDefinition(Parser *parser)
             fprintf(stderr, "Read function definition:\n");
             FuncIR->print(llvm::errs());
             fprintf(stderr, "\n");
-            ExitOnErr(TheJIT->addModule(llvm::orc::ThreadSafeModule(
-                std::move(Module), std::move(Context))));
-            InitializeModuleAndManagers();
         }
     } else {
         GetNextToken();
@@ -815,21 +813,9 @@ void HandelTopLevelExpr(Parser *parser)
 {
     if (auto FuncAST = parser->ParseTopLevelExpr()) {
         if (auto *FuncIR = FuncAST->codegen()) {
-
-            // Track Resources
-            auto ResTracker = TheJIT->getMainJITDylib().createResourceTracker();
-
-            auto TSModule = llvm::orc::ThreadSafeModule(std::move(Module),
-                                                        std::move(Context));
-            ExitOnErr(TheJIT->addModule(std::move(TSModule), ResTracker));
-            InitializeModuleAndManagers();
-
-            // Search for __anon_expr inside of TheJIT
-            auto ExprSymbol = ExitOnErr(TheJIT->lookup("__anon_expr"));
-
-            double (*FP)() = ExprSymbol.toPtr<double (*)()>();
-            fprintf(stderr, "Evaluated to %f\n", FP());
-            ExitOnErr(ResTracker->remove());
+            fprintf(stderr, "Read top level expression:\n");
+            FuncIR->print(llvm::errs());
+            fprintf(stderr, "\n");
         }
     } else {
         GetNextToken();

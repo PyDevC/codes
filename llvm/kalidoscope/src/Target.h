@@ -11,4 +11,4 @@
 #include <system_error>
 
 void InitAllTargets();
-int BuildToTarget();
+int BuildToTarget(std::string filename);

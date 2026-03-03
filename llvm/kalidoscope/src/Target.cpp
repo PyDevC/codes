@@ -1,5 +1,4 @@
 #include "Target.h"
-#include <iostream>
 #include "Parser.h"
 
 void InitAllTargets()
@@ -11,7 +10,7 @@ void InitAllTargets()
     llvm::InitializeAllAsmPrinters();
 }
 
-int BuildToTarget()
+int BuildToTarget(std::string filename)
 {
     auto TargetTriple = llvm::sys::getDefaultTargetTriple();
     std::unique_ptr<llvm::Module> Module = getModule();
@@ -37,7 +36,7 @@ int BuildToTarget()
 
     Module->setDataLayout(TargetMachine->createDataLayout());
 
-    auto Filename = "auto.o";
+    auto Filename = filename;
     std::error_code ErrorCode;
     llvm::raw_fd_ostream dest(Filename, ErrorCode, llvm::sys::fs::OF_None);
 

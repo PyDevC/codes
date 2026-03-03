@@ -29,5 +29,5 @@ int main(void)
     } while (true);
 
     InitAllTargets();
-    return BuildToTarget();
+    return BuildToTarget("output.o");
 }

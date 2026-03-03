@@ -82,34 +82,35 @@ llvm::Value *VariableExprASTNode::codegen()
     return Builder->CreateLoad(V->getAllocatedType(), V, m_VarName.c_str());
 }
 
-llvm::Value *VarASTNode::codegen(){
+llvm::Value *VarASTNode::codegen()
+{
     std::vector<llvm::AllocaInst *> OldBindings;
-    llvm::Function* Func = Builder->GetInsertBlock()->getParent();
+    llvm::Function *Func = Builder->GetInsertBlock()->getParent();
 
-    for(unsigned i = 0, e = m_VarNames.size(); i != e; ++i){
+    for (unsigned i = 0, e = m_VarNames.size(); i != e; ++i) {
         const std::string &VarName = m_VarNames[i].first;
-        ExprASTNode* Init = m_VarNames[i].second.get();
-        llvm::Value* InitVal;
-        if(Init){
+        ExprASTNode *Init = m_VarNames[i].second.get();
+        llvm::Value *InitVal;
+        if (Init) {
             InitVal = Init->codegen();
-            if(!InitVal){
+            if (!InitVal) {
                 return nullptr;
             }
         } else {
             InitVal = llvm::ConstantFP::get(*Context, llvm::APFloat(0.0));
         }
-        llvm::AllocaInst* Alloca = CreateEntryBlockAlloca(Func, VarName);
+        llvm::AllocaInst *Alloca = CreateEntryBlockAlloca(Func, VarName);
         Builder->CreateStore(InitVal, Alloca);
         OldBindings.push_back(NamedValues[VarName]);
         NamedValues[VarName] = Alloca;
     }
 
-    llvm::Value* Body = m_Body->codegen();
-    if(!Body){
+    llvm::Value *Body = m_Body->codegen();
+    if (!Body) {
         return nullptr;
     }
 
-    for(unsigned i = 0, e = m_VarNames.size(); i != e; ++i){
+    for (unsigned i = 0, e = m_VarNames.size(); i != e; ++i) {
         NamedValues[m_VarNames[i].first] = OldBindings[i];
     }
 
@@ -430,49 +431,52 @@ std::unique_ptr<ExprASTNode> Parser::ParseIdentifierExpr()
     }
 }
 
-std::unique_ptr<ExprASTNode> Parser::ParseVarExpr(){
+std::unique_ptr<ExprASTNode> Parser::ParseVarExpr()
+{
     GetNextToken(); // Consume LOCAL keyword
-    
+
     std::vector<std::pair<std::string, std::unique_ptr<ExprASTNode>>> VarNames;
-    if(CurrentToken != TOK_IDENTIFIER){
+    if (CurrentToken != TOK_IDENTIFIER) {
         LogError("Syntax Error: Expected identifier after keyword var.");
     }
 
-    while(true){
+    while (true) {
         std::string Name = getIdentifierStr();
         GetNextToken(); // Consume Identifier
 
         std::unique_ptr<ExprASTNode> Init;
-        if(CurrentToken == TOK_EQUAL){
+        if (CurrentToken == TOK_EQUAL) {
             GetNextToken();
             Init = ParseExpression();
-            if(!Init){
+            if (!Init) {
                 return nullptr;
             }
         }
 
         VarNames.push_back(std::make_pair(Name, std::move(Init)));
-        if(CurrentToken != TOK_COMMA){
+        if (CurrentToken != TOK_COMMA) {
             break;
         }
         GetNextToken(); // Consume COMMA
-        if(CurrentToken != TOK_IDENTIFIER){
+        if (CurrentToken != TOK_IDENTIFIER) {
             LogError("Syntax Error: Expected Identifier List after var");
         }
     }
 
-    if(CurrentToken == TOK_KEYWORD){
+    if (CurrentToken == TOK_KEYWORD) {
         Keywords keywords;
-        Keyword keytoken = keywords.KeywordToCode(getIdentifierStr().c_str(), getIdentifierStr().size());
-        if(keytoken != KEYWORD_IN){
+        Keyword keytoken = keywords.KeywordToCode(getIdentifierStr().c_str(),
+                                                  getIdentifierStr().size());
+        if (keytoken != KEYWORD_IN) {
             LogError("Syntax Error: Expected keyword in after var list.");
         }
         GetNextToken(); // Consume IN Keyword
         auto Body = ParseExpression();
-        if(!Body){
+        if (!Body) {
             return nullptr;
         }
-        return std::make_unique<VarASTNode>(std::move(VarNames), std::move(Body));
+        return std::make_unique<VarASTNode>(std::move(VarNames),
+                                            std::move(Body));
     } else {
         LogError("Syntax Error: Expected keyword in after var list.");
         return nullptr;

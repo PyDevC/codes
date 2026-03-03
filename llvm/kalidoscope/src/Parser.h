@@ -11,6 +11,7 @@
 #include "llvm/IR/DerivedTypes.h"
 #include "llvm/IR/Function.h"
 #include "llvm/IR/IRBuilder.h"
+#include "llvm/IR/Instructions.h"
 #include "llvm/IR/LLVMContext.h"
 #include "llvm/IR/Module.h"
 #include "llvm/IR/PassManager.h"
@@ -25,6 +26,7 @@
 #include "llvm/Transforms/Scalar/GVN.h"
 #include "llvm/Transforms/Scalar/Reassociate.h"
 #include "llvm/Transforms/Scalar/SimplifyCFG.h"
+#include "llvm/Transforms/Utils/Mem2Reg.h"
 
 #include "../include/KaleidoscopeJIT.h"
 
@@ -74,7 +76,26 @@ class VariableExprASTNode : public ExprASTNode
 
   public:
     VariableExprASTNode(const std::string &VarName) : m_VarName(VarName) {}
+    std::string getName() const { return m_VarName; }
     ~VariableExprASTNode() override {}
+    llvm::Value *codegen() override;
+};
+
+class VarASTNode : public ExprASTNode
+{
+  private:
+    std::vector<std::pair<std::string, std::unique_ptr<ExprASTNode>>>
+        m_VarNames;
+    std::unique_ptr<ExprASTNode> m_Body;
+
+  public:
+    VarASTNode(std::vector<std::pair<std::string, std::unique_ptr<ExprASTNode>>>
+                   varnames,
+               std::unique_ptr<ExprASTNode> body)
+        : m_VarNames(std::move(varnames)), m_Body(std::move(body))
+    {
+    }
+    ~VarASTNode() override {}
     llvm::Value *codegen() override;
 };
 
@@ -212,6 +233,7 @@ class Parser
     std::unique_ptr<ExprASTNode> ParseNumberExpr();
     std::unique_ptr<ExprASTNode> ParseParenExpr();
     std::unique_ptr<ExprASTNode> ParseIdentifierExpr();
+    std::unique_ptr<ExprASTNode> ParseVarExpr();
     std::unique_ptr<ExprASTNode> ParsePrimaryExpr();
     std::unique_ptr<ExprASTNode> ParseIfExpr();
     std::unique_ptr<ExprASTNode> ParseForExpr();

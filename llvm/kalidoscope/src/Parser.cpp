@@ -7,7 +7,7 @@ static int CurrentToken;
 static std::unique_ptr<llvm::LLVMContext> Context;
 static std::unique_ptr<llvm::IRBuilder<>> Builder;
 static std::unique_ptr<llvm::Module> Module;
-static std::map<std::string, llvm::Value *> NamedValues;
+static std::map<std::string, llvm::AllocaInst *> NamedValues;
 
 std::unique_ptr<llvm::orc::KaleidoscopeJIT> TheJIT;
 static std::unique_ptr<llvm::FunctionPassManager> FuncPass_M;
@@ -19,6 +19,15 @@ static std::unique_ptr<llvm::PassInstrumentationCallbacks> PassInstCallbacks;
 static std::unique_ptr<llvm::StandardInstrumentations> StdInst;
 static std::map<std::string, std::unique_ptr<PrototypeASTNode>> FunctionProtos;
 static llvm::ExitOnError ExitOnErr;
+
+static llvm::AllocaInst *CreateEntryBlockAlloca(llvm::Function *func,
+                                                llvm::StringRef VarName)
+{
+    llvm::IRBuilder<> TmpB(&func->getEntryBlock(),
+                           func->getEntryBlock().begin());
+    return TmpB.CreateAlloca(llvm::Type::getDoubleTy(*Context), nullptr,
+                             VarName);
+}
 
 void GetNextToken() { CurrentToken = gettok(); }
 
@@ -46,6 +55,19 @@ static int GetTokPrecedence()
     return Precedence;
 }
 
+llvm::Function *getFunction(std::string Name)
+{
+    if (auto *F = Module->getFunction(Name)) {
+        return F;
+    }
+
+    auto FExists = FunctionProtos.find(Name);
+    if (FExists != FunctionProtos.end()) {
+        return FExists->second->codegen();
+    }
+    return nullptr;
+}
+
 llvm::Value *NumberExprASTNode::codegen()
 {
     return llvm::ConstantFP::get(*Context, llvm::APFloat(m_NumberVal));
@@ -53,11 +75,45 @@ llvm::Value *NumberExprASTNode::codegen()
 
 llvm::Value *VariableExprASTNode::codegen()
 {
-    llvm::Value *V = NamedValues[m_VarName];
+    llvm::AllocaInst *V = NamedValues[m_VarName];
     if (!V) {
         return LogErrorV("Unknown Variable Name");
     }
-    return V;
+    return Builder->CreateLoad(V->getAllocatedType(), V, m_VarName.c_str());
+}
+
+llvm::Value *VarASTNode::codegen(){
+    std::vector<llvm::AllocaInst *> OldBindings;
+    llvm::Function* Func = Builder->GetInsertBlock()->getParent();
+
+    for(unsigned i = 0, e = m_VarNames.size(); i != e; ++i){
+        const std::string &VarName = m_VarNames[i].first;
+        ExprASTNode* Init = m_VarNames[i].second.get();
+        llvm::Value* InitVal;
+        if(Init){
+            InitVal = Init->codegen();
+            if(!InitVal){
+                return nullptr;
+            }
+        } else {
+            InitVal = llvm::ConstantFP::get(*Context, llvm::APFloat(0.0));
+        }
+        llvm::AllocaInst* Alloca = CreateEntryBlockAlloca(Func, VarName);
+        Builder->CreateStore(InitVal, Alloca);
+        OldBindings.push_back(NamedValues[VarName]);
+        NamedValues[VarName] = Alloca;
+    }
+
+    llvm::Value* Body = m_Body->codegen();
+    if(!Body){
+        return nullptr;
+    }
+
+    for(unsigned i = 0, e = m_VarNames.size(); i != e; ++i){
+        NamedValues[m_VarNames[i].first] = OldBindings[i];
+    }
+
+    return Body;
 }
 
 llvm::Value *IfExprASTNode::codegen()
@@ -110,24 +166,23 @@ llvm::Value *IfExprASTNode::codegen()
 
 llvm::Value *ForExprASTNode::codegen()
 {
+    llvm::Function *func = Builder->GetInsertBlock()->getParent();
+    llvm::AllocaInst *Alloca = CreateEntryBlockAlloca(func, m_VarName);
+
     llvm::Value *Init = m_Init->codegen();
     if (!Init) {
         return nullptr;
     }
 
-    llvm::Function *func = Builder->GetInsertBlock()->getParent();
-    llvm::BasicBlock *PreHeaderBB = Builder->GetInsertBlock();
+    Builder->CreateStore(Init, Alloca);
+
     llvm::BasicBlock *LoopBB = llvm::BasicBlock::Create(*Context, "loop", func);
 
     Builder->CreateBr(LoopBB);
     Builder->SetInsertPoint(LoopBB);
 
-    llvm::PHINode *variable =
-        Builder->CreatePHI(llvm::Type::getDoubleTy(*Context), 2, m_VarName);
-    variable->addIncoming(Init, PreHeaderBB);
-
-    llvm::Value* OldVal = NamedValues[m_VarName];
-    NamedValues[m_VarName] = variable;
+    llvm::AllocaInst *OldVal = NamedValues[m_VarName];
+    NamedValues[m_VarName] = Alloca;
 
     llvm::Value *Body = m_Body->codegen();
     if (!Body) {
@@ -135,33 +190,36 @@ llvm::Value *ForExprASTNode::codegen()
     }
 
     llvm::Value *Step = nullptr;
-    if(m_Step) {
+    if (m_Step) {
         Step = m_Step->codegen();
-        if(!Step){
+        if (!Step) {
             return nullptr;
-        } 
+        }
     } else {
-            Step = llvm::ConstantFP::get(*Context, llvm::APFloat(1.0));
+        Step = llvm::ConstantFP::get(*Context, llvm::APFloat(1.0));
     }
 
-    llvm::Value* NextVar = Builder->CreateFAdd(variable, Step, "nextval");
-
-    llvm::Value* EndCond = m_Condition->codegen();
-    if(!EndCond){
+    llvm::Value *EndCond = m_Condition->codegen();
+    if (!EndCond) {
         return nullptr;
     }
 
-    EndCond = Builder->CreateFCmpONE(EndCond, llvm::ConstantFP::get(*Context, llvm::APFloat(0.0)), "loopcond");
+    llvm::Value *CurrVar = Builder->CreateLoad(Alloca->getAllocatedType(),
+                                               Alloca, m_VarName.c_str());
+    llvm::Value *NextVar = Builder->CreateFAdd(CurrVar, Step, "nextval");
+    Builder->CreateStore(NextVar, Alloca);
 
-    llvm::BasicBlock* LoopEndBB = Builder->GetInsertBlock();
-    llvm::BasicBlock* AfterBB = llvm::BasicBlock::Create(*Context, "afterloop", func);
+    EndCond = Builder->CreateFCmpONE(
+        EndCond, llvm::ConstantFP::get(*Context, llvm::APFloat(0.0)),
+        "loopcond");
+
+    llvm::BasicBlock *AfterBB =
+        llvm::BasicBlock::Create(*Context, "afterloop", func);
 
     Builder->CreateCondBr(EndCond, LoopBB, AfterBB);
     Builder->SetInsertPoint(AfterBB);
 
-    variable->addIncoming(NextVar, LoopEndBB);
-
-    if(OldVal){
+    if (OldVal) {
         NamedValues[m_VarName] = OldVal;
     } else {
         NamedValues.erase(m_VarName);
@@ -172,6 +230,26 @@ llvm::Value *ForExprASTNode::codegen()
 
 llvm::Value *BinaryExprASTNode::codegen()
 {
+    // Special Assignment case
+    if (m_Op == '=') {
+        VariableExprASTNode *Lf =
+            static_cast<VariableExprASTNode *>(m_Left.get());
+        if (!Lf) {
+            return LogErrorV(
+                "Syntax Error: Assignment should be applied to a variable.");
+        }
+        llvm::Value *Rg = m_Right->codegen();
+        if (!Rg) {
+            return nullptr;
+        }
+        llvm::Value *variable = NamedValues[Lf->getName()];
+        if (!variable) {
+            return LogErrorV("Unknown Variable name.");
+        }
+        Builder->CreateStore(Rg, variable);
+        return Rg;
+    }
+
     llvm::Value *Lf = m_Left->codegen();
     llvm::Value *Rg = m_Right->codegen();
     if (!Lf || !Rg) {
@@ -189,32 +267,30 @@ llvm::Value *BinaryExprASTNode::codegen()
         return Builder->CreateFDiv(Lf, Rg, "divtmp");
     case TOK_OPERATOR_LT:
         Lf = Builder->CreateFCmpULT(Lf, Rg, "lttmp");
-        return Builder->CreateUIToFP(Lf, llvm::Type::getDoubleTy(*Context), "booltmp");
+        return Builder->CreateUIToFP(Lf, llvm::Type::getDoubleTy(*Context),
+                                     "booltmp");
     case TOK_OPERATOR_LTE:
         Lf = Builder->CreateFCmpULE(Lf, Rg, "ltetmp");
-        return Builder->CreateUIToFP(Lf, llvm::Type::getDoubleTy(*Context), "booltmp");
+        return Builder->CreateUIToFP(Lf, llvm::Type::getDoubleTy(*Context),
+                                     "booltmp");
     case TOK_OPERATOR_GT:
         Lf = Builder->CreateFCmpUGT(Lf, Rg, "gttmp");
-        return Builder->CreateUIToFP(Lf, llvm::Type::getDoubleTy(*Context), "booltmp");
+        return Builder->CreateUIToFP(Lf, llvm::Type::getDoubleTy(*Context),
+                                     "booltmp");
     case TOK_OPERATOR_GTE:
         Lf = Builder->CreateFCmpUGE(Lf, Rg, "gtetmp");
-        return Builder->CreateUIToFP(Lf, llvm::Type::getDoubleTy(*Context), "booltmp");
+        return Builder->CreateUIToFP(Lf, llvm::Type::getDoubleTy(*Context),
+                                     "booltmp");
     default:
-        return LogErrorV("Invalid Binary Operator");
+        break;
     };
-}
 
-llvm::Function *getFunction(std::string Name)
-{
-    if (auto *F = Module->getFunction(Name)) {
-        return F;
-    }
+    // Checking for function call
+    llvm::Function *func = getFunction(std::string("binary") + m_Op);
+    assert(func && "binary operator not found!");
 
-    auto FExists = FunctionProtos.find(Name);
-    if (FExists != FunctionProtos.end()) {
-        return FExists->second->codegen();
-    }
-    return nullptr;
+    llvm::Value *Ops[] = {Lf, Rg};
+    return Builder->CreateCall(func, Ops, "binaryop");
 }
 
 llvm::Value *CallExprASTNode::codegen()
@@ -278,7 +354,9 @@ llvm::Function *FunctionASTNode::codegen()
 
     NamedValues.clear();
     for (auto &Arg : Func->args()) {
-        NamedValues[std::string(Arg.getName())] = &Arg;
+        llvm::AllocaInst *Alloca = CreateEntryBlockAlloca(Func, Arg.getName());
+        Builder->CreateStore(&Arg, Alloca);
+        NamedValues[std::string(Arg.getName())] = Alloca;
     }
 
     if (llvm::Value *ReturnVal = m_Block->codegen()) {
@@ -349,6 +427,55 @@ std::unique_ptr<ExprASTNode> Parser::ParseIdentifierExpr()
         }
         GetNextToken();
         return call;
+    }
+}
+
+std::unique_ptr<ExprASTNode> Parser::ParseVarExpr(){
+    GetNextToken(); // Consume LOCAL keyword
+    
+    std::vector<std::pair<std::string, std::unique_ptr<ExprASTNode>>> VarNames;
+    if(CurrentToken != TOK_IDENTIFIER){
+        LogError("Syntax Error: Expected identifier after keyword var.");
+    }
+
+    while(true){
+        std::string Name = getIdentifierStr();
+        GetNextToken(); // Consume Identifier
+
+        std::unique_ptr<ExprASTNode> Init;
+        if(CurrentToken == TOK_EQUAL){
+            GetNextToken();
+            Init = ParseExpression();
+            if(!Init){
+                return nullptr;
+            }
+        }
+
+        VarNames.push_back(std::make_pair(Name, std::move(Init)));
+        if(CurrentToken != TOK_COMMA){
+            break;
+        }
+        GetNextToken(); // Consume COMMA
+        if(CurrentToken != TOK_IDENTIFIER){
+            LogError("Syntax Error: Expected Identifier List after var");
+        }
+    }
+
+    if(CurrentToken == TOK_KEYWORD){
+        Keywords keywords;
+        Keyword keytoken = keywords.KeywordToCode(getIdentifierStr().c_str(), getIdentifierStr().size());
+        if(keytoken != KEYWORD_IN){
+            LogError("Syntax Error: Expected keyword in after var list.");
+        }
+        GetNextToken(); // Consume IN Keyword
+        auto Body = ParseExpression();
+        if(!Body){
+            return nullptr;
+        }
+        return std::make_unique<VarASTNode>(std::move(VarNames), std::move(Body));
+    } else {
+        LogError("Syntax Error: Expected keyword in after var list.");
+        return nullptr;
     }
 }
 
@@ -495,6 +622,8 @@ std::unique_ptr<ExprASTNode> Parser::ParsePrimaryExpr()
             return ParseIfExpr();
         case KEYWORD_FOR:
             return ParseForExpr();
+        case KEYWORD_LOCAL:
+            return ParseVarExpr();
         default:
             std::cout << "Error: Keyword Not implemented.\n";
             exit(1);
@@ -635,6 +764,7 @@ void InitializeModuleAndManagers()
     StdInst->registerCallbacks(*PassInstCallbacks, ModuleAnalysis_M.get());
 
     // Adding Transform Passes
+    FuncPass_M->addPass(llvm::PromotePass());
     FuncPass_M->addPass(llvm::InstCombinePass());
     FuncPass_M->addPass(llvm::ReassociatePass());
     FuncPass_M->addPass(llvm::GVNPass());

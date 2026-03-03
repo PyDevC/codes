@@ -689,25 +689,30 @@ std::unique_ptr<PrototypeASTNode> Parser::ParsePrototype()
         return nullptr;
     }
     std::string FunctionName = getIdentifierStr();
-    GetNextToken(); // Consume Lparen
+    GetNextToken(); // Consume Identifier
     if (CurrentToken != TOK_LPAREN) {
         LogError("Expected a ( but got none");
         return nullptr;
     }
+    GetNextToken(); // Consume Lparen
     std::vector<std::string> Args;
-    do {
-        // BUG: Fix rn since you are skipping somethings
-        GetNextToken(); // Consume Lparen or Arg
-        if (CurrentToken == TOK_IDENTIFIER) {
-            Args.push_back(getIdentifierStr());
-            GetNextToken(); // Consume Rparen or Comma
+
+    if(CurrentToken != TOK_RPAREN) {
+        while(true){
+            if(CurrentToken == TOK_IDENTIFIER){
+                Args.push_back(getIdentifierStr());
+                GetNextToken(); // Consume Identifier
+            }
+            if(CurrentToken == TOK_RPAREN){
+                break;
+            }
+            if(CurrentToken != TOK_COMMA) {
+                LogError("Syntax Error: Expected ',' or ')'.");
+                exit(1);
+            }
+            GetNextToken(); // Consume COMMA
         }
-        if (CurrentToken != TOK_COMMA && CurrentToken != TOK_RPAREN) {
-            std::cout << "Error: Expected ',' or ')' when passing function "
-                         "arguments in surrounded expressions.\n";
-            exit(1);
-        }
-    } while (CurrentToken != TOK_RPAREN);
+    }
     GetNextToken(); // Consume Rparen
     return std::make_unique<PrototypeASTNode>(FunctionName, Args);
 }

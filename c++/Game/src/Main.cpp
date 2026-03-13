@@ -1,28 +1,20 @@
 #include <iostream>
+#include <string>
+#include <tuple>
 
-class Base {
-public:
-  Base() { std::cout << "Base Constructor\n"; }
-  virtual ~Base() { std::cout << "Base Destructor\n"; }
-};
+std::tuple<std::string, int> CreatePerson() { return {"Cherno", 24}; }
 
-class Derived : public Base {
-public:
-  Derived() { std::cout << "Derived Constructor\n"; }
-  ~Derived() { std::cout << "Derived Destructor\n"; }
-};
+int main(void) { 
+    std::tuple<std::string, int> person = CreatePerson();
+    std::string& Name = std::get<0>(person);
+    int age = std::get<1>(person);
+    std::cout << Name << " " << age << "\n";
 
-int main(void) {
-  Base *base = new Base();
-  delete base;
-  std::cout << "----------------------------------\n";
-  Derived *derived = new Derived();
-  delete derived;
-  Base *poly = new Derived();
-  delete poly;
+    std::string name;
+    std::tie(name, age) = CreatePerson();
+    std::cout << name << " " << age << "\n";
 
-  double value = 4.55;
-  double s = static_cast<int>(value) + 5.3;
-  std::cout << s << std::endl;
-  return 0;
+    auto[newName, newAge] = CreatePerson();
+    std::cout << newName << " " << newAge << "\n";
+    return 0; 
 }

@@ -1,20 +1,26 @@
+#include <fstream>
 #include <iostream>
-#include <string>
-#include <tuple>
+#include <optional>
 
-std::tuple<std::string, int> CreatePerson() { return {"Cherno", 24}; }
+std::optional<std::string> ReadFile(const std::string &filepath) {
+  std::ifstream stream(filepath);
+  if (stream) {
+    std::string result;
+    stream.close();
+    return result;
+  }
+  return {};
+}
 
-int main(void) { 
-    std::tuple<std::string, int> person = CreatePerson();
-    std::string& Name = std::get<0>(person);
-    int age = std::get<1>(person);
-    std::cout << Name << " " << age << "\n";
-
-    std::string name;
-    std::tie(name, age) = CreatePerson();
-    std::cout << name << " " << age << "\n";
-
-    auto[newName, newAge] = CreatePerson();
-    std::cout << newName << " " << newAge << "\n";
-    return 0; 
+int main(void) {
+  std::optional<std::string> data = ReadFile("data.txt");
+  std::string value = data.value_or("Not present");
+  std::optional<int> count;
+  int c = count.value_or(100);
+  if (data.has_value()) {
+    std::cout << "File read !!!\n";
+  } else {
+    std::cout << "Failure to read!!!\n";
+  }
+  return 0;
 }

@@ -10,6 +10,7 @@ runfiles_dir = Path(os.environ["RUNFILES_DIR"])
 tool_relpaths = [
     "../../../../contrib/llvm-project/mlir"
     "../../../../contrib/llvm-project/llvm"
+    "mlir_tutorial/tools"
 ]
 
 config.environment["PATH"] = (

@@ -6,8 +6,8 @@
 
 int main(int argc, char **argv) {
   mlir::DialectRegistry registry;
-  mlir::registerAllDialects(registry);
+  registry.insert<mlir::affine::AffineDialect>();
   mlir::PassRegistration<mlir::toy::AffineFullUnrollPass>();
-  return mlir::asMainReturnCode(
-      mlir::MlirOptMain(argc, argv, "Toy", registry));
+  mlir::PassRegistration<mlir::toy::AffineFullUnrollPassAsPatternRewrite>();
+  return mlir::asMainReturnCode(mlir::MlirOptMain(argc, argv, "Toy", registry));
 }

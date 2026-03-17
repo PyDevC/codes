@@ -1,8 +1,8 @@
 #include "lib/Transform/Affine/AffineFullUnroll.h"
 #include "mlir/Dialect/Affine/IR/AffineOps.h"
 #include "mlir/Dialect/Affine/LoopUtils.h"
-#include "mlir/Pass/Pass.h"
 #include "mlir/IR/PatternMatch.h"
+#include "mlir/Pass/Pass.h"
 #include "mlir/Transforms/GreedyPatternRewriteDriver.h"
 
 namespace mlir {
@@ -28,9 +28,9 @@ struct AffineFullUnrollPattern : public OpRewritePattern<affine::AffineForOp> {
 };
 
 void AffineFullUnrollPassAsPatternRewrite::runOnOperation() {
-    mlir::RewritePatternSet patterns(&getContext());
-    patterns.add<AffineFullUnrollPattern>(&getContext());
-    (void)applyPatternsGreedily(getOperation(), std::move(patterns));
+  mlir::RewritePatternSet patterns(&getContext());
+  patterns.add<AffineFullUnrollPattern>(&getContext());
+  (void)applyPatternsGreedily(getOperation(), std::move(patterns));
 }
 
 } // namespace toy

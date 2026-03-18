@@ -12,6 +12,28 @@ struct PowerOfTwoExpand : public OpRewritePattern<arith::MulIOp> {
       : OpRewritePattern<arith::MulIOp>(Context, 2) {}
   LogicalResult matchAndRewrite(arith::MulIOp Op,
                                 PatternRewriter &rewriter) const override {
+    mlir::Value Left = Op.getOperand(0);
+    mlir::Value Right = Op.getOperand(1);
+
+    auto RightDefiningOp = Right.getDefiningOp<arith::ConstantIntOp>();
+    if (!RightDefiningOp) {
+      return failure();
+    }
+    int64_t Value = RightDefiningOp.value();
+    bool is_power_of_two = ((Value & (Value - 1)) == 0);
+    if (!is_power_of_two) {
+      return failure();
+    }
+    arith::ConstantOp newConstant = rewriter.create<arith::ConstantOp>(
+        RightDefiningOp.getLoc(),
+        rewriter.getIntegerAttr(Right.getType(), Value / 2));
+    arith::MulIOp newMul =
+        rewriter.create<arith::MulIOp>(Op.getLoc(), Left, newConstant);
+    arith::AddIOp newAdd =
+        rewriter.create<arith::AddIOp>(Op.getLoc(), newMul, newMul);
+
+    rewriter.replaceOp(Op, newAdd);
+    rewriter.eraseOp(RightDefiningOp);
     return success();
   }
 };
@@ -21,6 +43,27 @@ struct PeelFromMul : public OpRewritePattern<arith::MulIOp> {
       : OpRewritePattern<arith::MulIOp>(Context, 1) {}
   LogicalResult matchAndRewrite(arith::MulIOp Op,
                                 PatternRewriter &rewriter) const override {
+
+    mlir::Value Left = Op.getOperand(0);
+    mlir::Value Right = Op.getOperand(1);
+
+    auto RightDefiningOp = Right.getDefiningOp<arith::ConstantIntOp>();
+    if (!RightDefiningOp) {
+      return failure();
+    }
+
+    int64_t Value = RightDefiningOp.value();
+
+    arith::ConstantOp newConstant = rewriter.create<arith::ConstantOp>(
+        RightDefiningOp.getLoc(),
+        rewriter.getIntegerAttr(Right.getType(), Value - 1));
+    arith::MulIOp newMul =
+        rewriter.create<arith::MulIOp>(Op.getLoc(), Left, newConstant);
+    arith::AddIOp newAdd =
+        rewriter.create<arith::AddIOp>(Op.getLoc(), newMul, Left);
+
+    rewriter.replaceOp(Op, newAdd);
+    rewriter.eraseOp(RightDefiningOp);
     return success();
   }
 };

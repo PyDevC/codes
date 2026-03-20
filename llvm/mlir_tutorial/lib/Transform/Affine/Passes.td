@@ -11,12 +11,4 @@ def AffineFullUnroll : Pass<"affine-full-unroll"> {
     let dependentDialects = ["mlir::affine::AffineDialect"];
 }
 
-def AffineFullUnrollPatternRewrite : Pass<"affine-full-unroll-rewrite"> {
-    let summary = "Fully Unroll all affine loops using pattern rewriter engine";
-    let description = [{
-        Full Unroll all affine loops using pattern rewriter engine.
-    }];
-    let dependentDialects = ["mlir::affine::AffineDialect"];
-}
-
 #endif // LIB_TRANSFORM_AFFINE_PASSES_H_

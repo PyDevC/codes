@@ -7,6 +7,9 @@
 namespace mlir {
 namespace toy {
 
+#define GEN_PASS_DEF_MULTOADD
+#include "lib/Transform/Arith/Passes.h.inc"
+
 struct PowerOfTwoExpand : public OpRewritePattern<arith::MulIOp> {
   PowerOfTwoExpand(mlir::MLIRContext *Context)
       : OpRewritePattern<arith::MulIOp>(Context, 2) {}
@@ -68,12 +71,16 @@ struct PeelFromMul : public OpRewritePattern<arith::MulIOp> {
   }
 };
 
-void MulToAddPass::runOnOperation() {
-  mlir::RewritePatternSet patterns(&getContext());
-  patterns.add<PowerOfTwoExpand>(&getContext());
-  patterns.add<PeelFromMul>(&getContext());
-  (void)applyPatternsGreedily(getOperation(), std::move(patterns));
-}
+struct MulToAdd : impl::MulToAddBase<MulToAdd> {
+  using MulToAddBase::MulToAddBase;
+
+  void runOnOperation() {
+    mlir::RewritePatternSet patterns(&getContext());
+    patterns.add<PowerOfTwoExpand>(&getContext());
+    patterns.add<PeelFromMul>(&getContext());
+    (void)applyPatternsGreedily(getOperation(), std::move(patterns));
+  }
+};
 
 } // namespace toy
 } // namespace mlir

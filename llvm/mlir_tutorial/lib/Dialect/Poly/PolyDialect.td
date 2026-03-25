@@ -8,4 +8,5 @@ def Poly_Dialect : Dialect {
     }];
 
     let cppNamespace = "::mlir::toy::poly";
+    let useDefaultTypePrinterParser = 1;
 }

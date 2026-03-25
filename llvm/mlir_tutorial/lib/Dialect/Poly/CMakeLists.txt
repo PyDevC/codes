@@ -8,6 +8,11 @@ mlir_tablegen(PolyType.h.inc -gen-typedef-decls -name=Poly)
 mlir_tablegen(PolyType.cpp.inc -gen-typedef-defs -name=Poly)
 add_public_tablegen_target(PolyTypeIncGen)
 
+set(LLVM_TARGET_DEFINITIONS PolyOps.td)
+mlir_tablegen(PolyOps.h.inc -gen-op-decls -name=Poly)
+mlir_tablegen(PolyOps.cpp.inc -gen-op-defs -name=Poly)
+add_public_tablegen_target(PolyOpsIncGen)
+
 add_mlir_dialect_library(PolyDialect
     PolyDialect.cpp
     ${PROJECT_SOURCE_DIR}/lib/Dialect/Poly/
@@ -15,6 +20,7 @@ add_mlir_dialect_library(PolyDialect
     DEPENDS
     PolyDialectIncGen
     PolyTypeIncGen
+    PolyOpsIncGen
 
     LINK_LIBS PUBLIC
     MLIRDialect

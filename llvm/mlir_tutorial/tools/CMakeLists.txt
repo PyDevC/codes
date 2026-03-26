@@ -10,6 +10,7 @@ set(LIBS
     MLIRFuncDialect
     MLIRAffineDialect
     MLIRSCFDialect
+    MLIRTensorDialect
 
     MLIROptLib
     MLIRPass

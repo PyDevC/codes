@@ -7,9 +7,11 @@ include "PolyType.td"
 include "mlir/IR/OpBase.td"
 include "mlir/Interfaces/SideEffectInterfaces.td"
 
-class Poly_BinOps<string mnemonic> : Op<Poly_Dialect, mnemonic, [Pure]>{
-    let arguments = (ins Polynomial:$lhs, Polynomial:$rhs);
-    let results = (outs Polynomial:$res);
+def PolyORContainer : TypeOrValueSemanticsContainer<Polynomial, "poly-or-container">;
+
+class Poly_BinOps<string mnemonic> : Op<Poly_Dialect, mnemonic, [Pure, ElementwiseMappable, SameOperandsAndResultElementType]>{
+    let arguments = (ins PolyORContainer:$lhs, PolyORContainer:$rhs);
+    let results = (outs PolyORContainer:$res);
     let assemblyFormat = "$lhs `,` $rhs attr-dict `:` `(` type($lhs) `,` type($rhs) `)` `->` type($res)";
 }
 

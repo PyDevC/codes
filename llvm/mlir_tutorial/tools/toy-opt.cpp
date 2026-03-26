@@ -10,6 +10,7 @@
 #include "mlir/Dialect/Affine/IR/AffineOps.h"
 #include "mlir/Dialect/Func/IR/FuncOps.h"
 #include "mlir/Dialect/SCF/IR/SCF.h"
+#include "mlir/Dialect/Tensor/IR/Tensor.h"
 
 #include "mlir/Tools/mlir-opt/MlirOptMain.h"
 
@@ -20,6 +21,7 @@ int main(int argc, char **argv) {
   registry.insert<mlir::arith::ArithDialect>();
   registry.insert<mlir::toy::poly::PolyDialect>();
   registry.insert<mlir::scf::SCFDialect>();
+  registry.insert<mlir::tensor::TensorDialect>();
 
   mlir::registerControlFlowSinkPass();
   mlir::registerLoopInvariantCodeMotionPass();

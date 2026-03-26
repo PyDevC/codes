@@ -5,8 +5,9 @@ include "PolyDialect.td"
 include "PolyType.td"
 
 include "mlir/IR/OpBase.td"
+include "mlir/Interfaces/SideEffectInterfaces.td"
 
-class Poly_BinOps<string mnemonic> : Op<Poly_Dialect, mnemonic>{
+class Poly_BinOps<string mnemonic> : Op<Poly_Dialect, mnemonic, [Pure]>{
     let arguments = (ins Polynomial:$lhs, Polynomial:$rhs);
     let results = (outs Polynomial:$res);
     let assemblyFormat = "$lhs `,` $rhs attr-dict `:` `(` type($lhs) `,` type($rhs) `)` `->` type($res)";
@@ -24,7 +25,7 @@ def Poly_SubOps : Poly_BinOps<"sub"> {
     let summary = "Subtraction between two Polynomials.";
 }
 
-def Poly_FromTensorOp : Op<Poly_Dialect, "from_tensor"> {
+def Poly_FromTensorOp : Op<Poly_Dialect, "from_tensor", [Pure]> {
     let summary = "Create Polynomial from a integer coefficient stored in a tensor.";
     let arguments = (ins TensorOf<[AnyInteger]>:$input);
     let results = (outs Polynomial:$res);

@@ -5,10 +5,12 @@ set(LIBS
     ${dialect_libs}
     ${conversion_libs}
     MLIRIR
+
     MLIRArithDialect
     MLIRFuncDialect
     MLIRAffineDialect
-    MLIRAffineTransforms
+    MLIRSCFDialect
+
     MLIROptLib
     MLIRPass
     MLIRTransforms

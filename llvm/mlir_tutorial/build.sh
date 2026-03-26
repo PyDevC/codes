@@ -31,3 +31,7 @@ cmake .. -G $BUILD_SYSTEM \
 sudo cmake --build . -j $(nproc)
 
 popd
+
+echo ""
+echo "Testing the Dialect and Passes..."
+lit tests/

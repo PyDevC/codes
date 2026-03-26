@@ -1,20 +1,23 @@
 import os
-from pathlib import Path
-from lit.formats import ShTest
+import lit.formats
 
-config.name = "mlir_tutorial"
-config.test_format = ShTest()
+config.name = "MLIR_TUTORIAL"
+config.test_format = lit.formats.ShTest()
 config.suffixes = [".mlir"]
 
-runfiles_dir = Path(os.environ["RUNFILES_DIR"])
-tool_relpaths = [
-    "../../../../contrib/llvm-project/mlir"
-    "../../../../contrib/llvm-project/llvm"
-    "mlir_tutorial/tools"
-]
+test_dir = os.path.dirname(__file__)
+project_root = os.path.dirname(test_dir)
+# Adjust "build/bin" to match your actual build directory name
+bindir = os.path.join(project_root, "build", "tools")
 
-config.environment["PATH"] = (
-    ":".join(str(runfiles_dir.joinpath(Path(path))) for path in tool_relpaths)
-        + ":"
-        + os.environ["PATH"]
-)
+# 1. Update PATH so the shell can find toy-opt and FileCheck
+config.environment["PATH"] = os.path.pathsep.join([
+    bindir,
+    os.environ.get("PATH", "")
+])
+
+# 2. Directly define the toy-opt substitution
+# This replaces 'toy-opt' in your RUN lines with the full path to the binary
+toy_opt_path = os.path.join(bindir, "toy-opt")
+config.substitutions.append(("toy-opt", toy_opt_path))
+config.substitutions.append(("FileCheck", os.path.join(os.environ["THIRDPARTY_LLVM_DIR"], "build", "bin", "FileCheck")))

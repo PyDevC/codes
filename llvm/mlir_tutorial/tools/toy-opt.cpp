@@ -26,6 +26,7 @@ int main(int argc, char **argv) {
   mlir::registerControlFlowSinkPass();
   mlir::registerLoopInvariantCodeMotionPass();
   mlir::registerCSEPass();
+  mlir::registerCanonicalizerPass();
   mlir::toy::registerAffinePasses();
   mlir::toy::registerArithPasses();
   return mlir::asMainReturnCode(mlir::MlirOptMain(argc, argv, "Toy", registry));

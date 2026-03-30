@@ -15,6 +15,7 @@ add_public_tablegen_target(PolyOpsIncGen)
 
 add_mlir_dialect_library(PolyDialect
     PolyDialect.cpp
+    PolyOps.cpp
     ${PROJECT_SOURCE_DIR}/lib/Dialect/Poly/
 
     DEPENDS

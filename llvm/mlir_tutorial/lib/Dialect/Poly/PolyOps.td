@@ -37,11 +37,18 @@ def Poly_FromTensorOp : Op<Poly_Dialect, "from_tensor", [Pure]> {
     let hasFolder = 1;
 }
 
+def Poly_ToTensorOp : Op<Poly_Dialect, "to_tensor", [Pure]> {
+    let summary = "Converts PolynomialType to tensor.";
+    let arguments = (ins Polynomial:$input);
+    let results = (outs TensorOf<[AnyInteger]>:$res);
+    let assemblyFormat = "$input attr-dict `:` type($input) `->` type($res)";
+}
+
 def Poly_EvalOp : Op<Poly_Dialect, "eval"> {
     let summary = "Evaluates a Polynomial at a given input value.";
-    let arguments = (ins Polynomial:$input, AnyInteger:$point);
+    let arguments = (ins Polynomial:$polynomial, AnyInteger:$point);
     let results = (outs AnyInteger:$res);
-    let assemblyFormat = "$input`,` $point attr-dict `:` `(`type($input)`,` type($point)`)` `->` type($res)";
+    let assemblyFormat = "$polynomial`,` $point attr-dict `:` `(`type($polynomial)`,` type($point)`)` `->` type($res)";
 }
 
 def Poly_ConstantOp : Op<Poly_Dialect, "constant", [Pure, ConstantLike]> {

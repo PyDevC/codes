@@ -1,5 +1,6 @@
 #include "lib/Dialect/Poly/PolyDialect.h"
 
+#include "lib/Conversion/PolyToStandard/PolyToStandard.h"
 #include "lib/Transform/Affine/AffineFullUnroll.h"
 #include "lib/Transform/Arith/MulToAdd.h"
 
@@ -29,5 +30,6 @@ int main(int argc, char **argv) {
   mlir::registerCanonicalizerPass();
   mlir::toy::registerAffinePasses();
   mlir::toy::registerArithPasses();
+  mlir::toy::poly::registerPolyToStandardPasses();
   return mlir::asMainReturnCode(mlir::MlirOptMain(argc, argv, "Toy", registry));
 }

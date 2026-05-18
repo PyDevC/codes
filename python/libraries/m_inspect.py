@@ -66,3 +66,19 @@ myfunc_out = inspect.getmembers(myfunc)
 myfunc_dict = dict(myfunc_out)
 for key, value in myfunc_dict.items():
     print(key, value)
+
+################################################################################
+# type checking of module, class, method and other things
+################################################################################
+
+print(f"ismodule(B) = {inspect.ismodule(B)}")
+print(f"ismethod(B) = {inspect.ismethod(B)}")
+print(f"isclass(B) = {inspect.isclass(B)}")
+
+print(f"ismodule(inspect) = {inspect.ismodule(inspect)}")
+print(f"ismethod(inspect) = {inspect.ismethod(inspect)}")
+print(f"isclass(inspect) = {inspect.isclass(inspect)}")
+
+print(f"ismodule(b.Print) = {inspect.ismodule(b.Print)}")
+print(f"ismethod(b.Print) = {inspect.ismethod(b.Print)}")
+print(f"isclass(b.Print) = {inspect.isclass(b.Print)}")

@@ -1,13 +1,14 @@
 #include "lib/Conversion/PolyToStandard/PolyToStandard.h"
-
 #include "lib/Dialect/Poly/PolyOps.h"
 #include "lib/Dialect/Poly/PolyType.h"
+
+#include "llvm/ADT/SmallVector.h"
+
 #include "mlir/Dialect/Func/IR/FuncOps.h"
 #include "mlir/Dialect/Func/Transforms/FuncConversions.h"
 #include "mlir/Dialect/SCF/IR/SCF.h"
 #include "mlir/IR/ImplicitLocOpBuilder.h"
 #include "mlir/Transforms/DialectConversion.h"
-#include "llvm/ADT/SmallVector.h"
 
 namespace mlir {
 namespace toy {
@@ -30,7 +31,8 @@ public:
 };
 
 struct ConvertAdd : public OpConversionPattern<AddOp> {
-  ConvertAdd(MLIRContext *context) : OpConversionPattern<AddOp>(context) {};
+  ConvertAdd(TypeConverter typeConverter, MLIRContext *context)
+      : OpConversionPattern<AddOp>(typeConverter, context) {};
   using OpConversionPattern::OpConversionPattern;
   LogicalResult
   matchAndRewrite(AddOp Op, OpAdaptor adaptor,
@@ -44,7 +46,8 @@ struct ConvertAdd : public OpConversionPattern<AddOp> {
 };
 
 struct ConvertSub : public OpConversionPattern<SubOp> {
-  ConvertSub(MLIRContext *context) : OpConversionPattern<SubOp>(context) {};
+  ConvertSub(TypeConverter typeConverter, MLIRContext *context)
+      : OpConversionPattern<SubOp>(typeConverter, context) {};
   using OpConversionPattern::OpConversionPattern;
   LogicalResult
   matchAndRewrite(SubOp Op, SubOp::Adaptor adaptor,
@@ -58,8 +61,8 @@ struct ConvertSub : public OpConversionPattern<SubOp> {
 };
 
 struct ConvertFromTensor : public OpConversionPattern<FromTensorOp> {
-  ConvertFromTensor(MLIRContext *context)
-      : OpConversionPattern<FromTensorOp>(context) {};
+  ConvertFromTensor(TypeConverter typeConverter, MLIRContext *context)
+      : OpConversionPattern<FromTensorOp>(typeConverter, context) {};
   using OpConversionPattern::OpConversionPattern;
   LogicalResult matchAndRewrite(FromTensorOp Op, FromTensorOp::Adaptor adaptor,
                                 ConversionPatternRewriter &rewriter) {
@@ -89,8 +92,8 @@ struct ConvertFromTensor : public OpConversionPattern<FromTensorOp> {
 };
 
 struct ConvertToTensor : OpConversionPattern<ToTensorOp> {
-  ConvertToTensor(MLIRContext *context)
-      : OpConversionPattern<ToTensorOp>(context) {}
+  ConvertToTensor(TypeConverter typeConverter, MLIRContext *context)
+      : OpConversionPattern<ToTensorOp>(typeConverter, context) {};
 
   using OpConversionPattern::OpConversionPattern;
 
@@ -103,7 +106,8 @@ struct ConvertToTensor : OpConversionPattern<ToTensorOp> {
 };
 
 struct ConvertConstant : OpConversionPattern<ConstantOp> {
-  ConvertConstant(MLIRContext *context) : OpConversionPattern(context) {};
+  ConvertConstant(TypeConverter typeConverter, MLIRContext *context)
+      : OpConversionPattern<ConstantOp>(typeConverter, context) {};
   LogicalResult
   matchAndRewrite(ConstantOp Op, ConstantOp::Adaptor adaptor,
                   ConversionPatternRewriter &rewriter) const override {
@@ -117,7 +121,8 @@ struct ConvertConstant : OpConversionPattern<ConstantOp> {
 };
 
 struct ConvertMul : OpConversionPattern<MulOp> {
-  ConvertMul(MLIRContext *context) : OpConversionPattern(context) {};
+  ConvertMul(TypeConverter typeConverter, MLIRContext *context)
+      : OpConversionPattern<MulOp>(typeConverter, context) {};
   using OpConversionPattern::OpConversionPattern;
 
   LogicalResult
@@ -168,7 +173,8 @@ struct ConvertMul : OpConversionPattern<MulOp> {
 };
 
 struct ConvertEval : public OpConversionPattern<EvalOp> {
-  ConvertEval(MLIRContext *context) : OpConversionPattern(context) {}
+  ConvertEval(TypeConverter typeConverter, MLIRContext *context)
+      : OpConversionPattern<EvalOp>(typeConverter, context) {};
   using OpConversionPattern::OpConversionPattern;
   LogicalResult
   matchAndRewrite(EvalOp Op, EvalOp::Adaptor adaptor,
@@ -213,14 +219,12 @@ struct PolyToStandard : impl::PolyToStandardBase<PolyToStandard> {
     auto *module = getOperation();
     ConversionTarget target(*context);
     target.addLegalDialect<arith::ArithDialect>();
-    target.addLegalDialect<scf::SCFDialect>();
-    target.addLegalDialect<func::FuncDialect>();
-    target.addLegalDialect<tensor::TensorDialect>();
     target.addIllegalDialect<PolyDialect>();
     RewritePatternSet patterns(context);
     PolyToStandardTypeConverter typeConverter(context);
-    patterns.add<ConvertAdd, ConvertSub, ConvertFromTensor, ConvertToTensor,
-                 ConvertConstant, ConvertMul, ConvertEval>(context);
+    patterns.add<ConvertAdd, ConvertConstant, ConvertFromTensor, ConvertToTensor,
+                 ConvertSub, ConvertMul, ConvertEval>(typeConverter,
+                                                           context);
 
     populateFunctionOpInterfaceTypeConversionPattern<func::FuncOp>(
         patterns, typeConverter);
@@ -230,8 +234,8 @@ struct PolyToStandard : impl::PolyToStandardBase<PolyToStandard> {
     });
 
     populateReturnOpTypeConversionPattern(patterns, typeConverter);
-    target.addDynamicallyLegalOp<func::FuncOp>(
-        [&](func::FuncOp Op) { return typeConverter.isLegal(Op); });
+    target.addDynamicallyLegalOp<func::ReturnOp>(
+        [&](func::ReturnOp Op) { return typeConverter.isLegal(Op); });
 
     populateCallOpTypeConversionPattern(patterns, typeConverter);
     target.addDynamicallyLegalOp<func::CallOp>(

@@ -24,12 +24,12 @@ int main(int argc, char **argv) {
   registry.insert<mlir::scf::SCFDialect>();
   registry.insert<mlir::tensor::TensorDialect>();
 
+  mlir::toy::poly::registerPolyToStandardPasses();
   mlir::registerControlFlowSinkPass();
   mlir::registerLoopInvariantCodeMotionPass();
   mlir::registerCSEPass();
   mlir::registerCanonicalizerPass();
   mlir::toy::registerAffinePasses();
   mlir::toy::registerArithPasses();
-  mlir::toy::poly::registerPolyToStandardPasses();
   return mlir::asMainReturnCode(mlir::MlirOptMain(argc, argv, "Toy", registry));
 }

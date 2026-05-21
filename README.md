@@ -1,21 +1,18 @@
 # codes
 
-Dump all my learning cycles, all my codes, all my tutorial walkthroughs in here.
+Personal collection of learning projects, practice code, and tutorial walkthroughs.
 
-## Learning List
-- CMake
-- Algorithms
-- Data Structures
-- Compilers
-- C++
-- C
-- LLVM
-- MLIR
-- C++ STL
-- Python internals
+## Directories
 
-## Resources
-
-This is an incomplete list of studies from where I studied all the things mentioned above, there are a few things I didn't mentioned either because they are somehting of personal interest or something that I didn't journaled.
-
-- 
+- **assembly/** — x86-64 NASM programs
+- **barebone_c++/** — C++ with raw compiler flags, no build system
+- **c++/** — C++17 game engine library and executable (CMake)
+- **CMakeExp/** — CMake experiments: targets, libraries, calculator, variables
+- **compiler/** — Writing compiler code
+- **leetcode/** — Algorithm solutions in C, C++, Python, Lua
+- **llvm/kalidoscope/** — LLVM Kaleidoscope JIT tutorial implementation
+- **llvm/mlir_tutorial/** — MLIR dialect and pass tutorial
+- **package/** — Python package development and documentation
+- **python/** — CPython internals exploration via `inspect` module
+- **scripts/** — Utility shell scripts (cleanup, git push)
+- **stl_learn/** — C++ STL container deep dives (array, vector)

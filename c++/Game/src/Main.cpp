@@ -1,11 +1,10 @@
 #include <iostream>
-#include <variant>
 
-int main(void) {
-  std::variant<std::string, int> data;
-  data = "Cherno";
-  std::cout << std::get<std::string>(data) << "\n";
-  data = 10;
-  std::cout << std::get<int>(data) << "\n";
-  return 0;
+int main(int argc, char* argv[]) {
+    if (argc > 1){
+        std::cout << "argc == " << argc << std::endl;
+        for (int i = 0; i < argc; i++){
+        }
+    }
+    return 0;
 }

@@ -13,6 +13,9 @@ from mlir.ir import (
     ## Loading Types
     IntegerType,
     FunctionType,
+
+    ## Attributes
+    UnitAttr,
 )
 
 def arith_add_two_numbers():
@@ -38,6 +41,7 @@ def generate_ir(emit_ir: bool=False):
             func_type = FunctionType.get(inputs=[], results=[i32])
 
             main_function = func.FuncOp("main", func_type)
+            main_function.attributes["llvm.emit_c_interface"] = UnitAttr.get()
             entry_block = main_function.add_entry_block()
             with InsertionPoint(entry_block):
                 func_return = arith_add_two_numbers()

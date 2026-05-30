@@ -9,7 +9,7 @@ def main():
     # Getting lowered IR
     module.dump()
 
-    exec.execute(module)
+    exec.execute(module, context)
 
 
 if __name__ == "__main__":

@@ -9,7 +9,7 @@ public:
   vector<int> twoSum(vector<int> &nums, int target) {
     unordered_map<int, int> cache{};
     for (int i{}; i < nums.size(); ++i) {
-      comp = target - nums[i];
+      int comp = target - nums[i];
       auto lookup = cache.find(nums[i]);
       if (lookup != cache.end()) {
         return {lookup->second, i};

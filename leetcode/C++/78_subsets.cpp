@@ -2,23 +2,27 @@
 #include <vector>
 
 class Solution {
-  void backtrack(int start, std::vector<int> &path, std::vector<int> &nums,
-                 std::vector<std::vector<int>> &result) {
-    result.push_back(path);
-    if (start >= nums.size())
+  void backtrace(int i, std::vector<int> &nums, std::vector<int> &path,
+                 std::vector<std::vector<int>> &results) {
+    if (i == nums.size()) {
+      results.push_back(path);
       return;
-    for (int i{start}; i < nums.size(); ++i) {
-      path.push_back(nums[i]);
-      backtrack(i + 1, path, nums, result);
-      path.pop_back();
     }
+
+    // take
+    path.push_back(nums[i]);
+    backtrace(i + 1, nums, path, results);
+
+    // skip
+    path.pop_back();
+    backtrace(i + 1, nums, path, results);
   }
 
 public:
   std::vector<std::vector<int>> subsets(std::vector<int> &nums) {
     std::vector<std::vector<int>> result{};
     std::vector<int> path{};
-    backtrack(0, path, nums, result);
+    backtrace(0, nums, path, result);
     return result;
   }
 };

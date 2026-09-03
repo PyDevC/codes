@@ -22,17 +22,17 @@ bool checkValidState(int row, int col, std::vector<int> &prevStates) {
   return true;
 }
 
-int recQueens(int level, int n, std::vector<int> &prevStates) {
-  if (level == n) {
+int recQueens(int row, int n, std::vector<int> &prevStates) {
+  if (row == n) {
     return 1;
   }
 
   int ans{};
   for (int col{}; col < n; ++col) {
-    if (checkValidState(level, col, prevStates)) {
-      prevStates[level] = col;
-      ans += recQueens(level + 1, n, prevStates);
-      prevStates[level] = -1;
+    if (checkValidState(row, col, prevStates)) {
+      prevStates[row] = col;
+      ans += recQueens(row + 1, n, prevStates);
+      prevStates[row] = -1;
     }
   }
   return ans;

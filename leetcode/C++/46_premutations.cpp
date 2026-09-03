@@ -2,30 +2,24 @@
 #include <vector>
 
 class Solution {
-  void backtrack(std::vector<bool> &used, std::vector<int> &path,
-                 std::vector<int> &nums,
+  void backtrack(int i, std::vector<int> &nums,
                  std::vector<std::vector<int>> &result) {
-    if (path.size() == nums.size()) {
-      result.push_back(path);
+    if (i == nums.size()) {
+      result.push_back(nums);
       return;
     }
-    for (int i{}; i < nums.size(); ++i) {
-      if (!used[i]) {
-        path.push_back(nums[i]);
-        used[i] = true;
-        backtrack(used, path, nums, result);
-        used[i] = false;
-        path.pop_back();
-      }
+
+    for (int j{i}; j < nums.size(); ++j) {
+      std::swap(nums[i], nums[j]);
+      backtrack(i + 1, nums, result);
+      std::swap(nums[i], nums[j]);
     }
   }
 
 public:
   std::vector<std::vector<int>> permute(std::vector<int> &nums) {
     std::vector<std::vector<int>> result{};
-    std::vector<int> path{};
-    std::vector<bool> used(nums.size(), false);
-    backtrack(used, path, nums, result);
+    backtrack(0, nums, result);
     return result;
   }
 };

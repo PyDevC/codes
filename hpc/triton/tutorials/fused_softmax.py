@@ -1,7 +1,11 @@
+from typing import List
+
 import torch
 import torch.nn.functional as F
 import triton
 import triton.language as tl
+
+from benchmark.benchmark import run_bench
 
 DEVICE = triton.runtime.driver.active.get_active_torch_device()
 
@@ -48,7 +52,8 @@ def builtin_softmax_kernel(x_ptr, o_ptr, size, BLOCK_SIZE: tl.constexpr):
     out = tl.softmax(x, dim=0)
     tl.store(o_ptr + offset, out, mask=mask)
 
-def builtin_softmax(x: torch.Tensor):
+def builtin_softmax(x_list: List[torch.Tensor]):
+    x = x_list[0]
     output = torch.empty_like(x)
     n_size = output.numel()
 
@@ -61,58 +66,10 @@ def builtin_softmax(x: torch.Tensor):
 
     return output
 
-def simple_softmax(x: torch.Tensor):
-    x_max = x.max()
-    soft = torch.exp(x - x_max) / sum([torch.exp(j - x_max) for j in x])
-    return soft
+def torch_softmax(x: List[torch.Tensor]):
+    return torch.softmax(x[0], dim=0)
 
-model = torch.compile(lambda x: F.softmax(x, dim=0))
+def make_tensor(size, device, dtype):
+    return [torch.rand(size, device=device, dtype=dtype)]
 
-def test():
-    x = torch.randn(10, device=DEVICE)
-    # x = torch.tensor([2000.0, 10000.0, 1000.1], device=DEVICE, dtype=torch.float64)
-
-    print(simple_softmax(x))
-    print(F.softmax(x, dim=0))
-    print(builtin_softmax(x))
-    print(softmax(x))
-
-
-@triton.testing.perf_report(
-    triton.testing.Benchmark(
-        x_names=['size'],
-        x_vals=[2**i for i in range(25, 27)],
-        x_log=True,
-        line_arg='provider',
-        line_vals=['builtin triton softmax', 'simple softmax', 'torch', 'triton'],
-        line_names=['builtin-softmax', 'simple-softmax', 'torch', 'Triton'],
-        ylabel="GB/s",
-        plot_name='softmax performance',
-        args={}
-    )
-)
-def benchmark(size, provider):
-    x = torch.randn(size, device=DEVICE, dtype=torch.float32)
-    quantiles = [0.5, 0.2, 0.8]
-
-    if provider == "torch":
-        ms, min_ms, max_ms = triton.testing.do_bench(lambda: model(x), quantiles=quantiles)
-    elif provider == "triton":
-        ms, min_ms, max_ms = triton.testing.do_bench(lambda: softmax(x), quantiles=quantiles)
-    elif provider == "simple softmax":
-        if size > 100000:  
-            ms, min_ms, max_ms = 0.0, 0.0, 0.0
-        else:
-            ms, min_ms, max_ms = triton.testing.do_bench(lambda: simple_softmax(x), quantiles=quantiles)
-    elif provider == "builtin triton softmax":
-        ms, min_ms, max_ms = triton.testing.do_bench(lambda: builtin_softmax(x), quantiles=quantiles)
-
-    if ms == 0:
-        return 0.0, 0.0, 0.0
-
-    gbps = lambda t: (3 * x.numel() * x.element_size() * 1e-9) / (t * 1e-3) if t > 0 else 0.0
-
-    return gbps(ms), gbps(min_ms), gbps(max_ms)
-
-# test()
-benchmark.run(print_data=True)
+run_bench(builtin_softmax, torch_softmax, make_tensor, dtype=torch.float32, plot_name='fused_softmax')

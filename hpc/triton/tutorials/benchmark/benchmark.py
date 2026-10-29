@@ -6,8 +6,8 @@ DEVICE = triton.runtime.driver.active.get_active_torch_device()
 
 @triton.testing.perf_report(
     triton.testing.Benchmark(
-        x_names=['size'],
-        x_vals=[2**i for i in range(12, 28, 1)],
+        x_names=['M', 'N', 'K'],
+        x_vals=[],
         line_arg='provider',
         line_vals=['triton', 'torch'],
         line_names=['Triton', 'Torch'],
@@ -16,7 +16,8 @@ DEVICE = triton.runtime.driver.active.get_active_torch_device()
         plot_name='',
         args={},
     ))
-def benchmark(fn_triton, fn_torch, create_tensor_fn, size, provider, dtype):
+def benchmark(fn_triton, fn_torch, create_tensor_fn, M, N, K, provider, dtype):
+    size = [M, N, K]
     input_tensors = create_tensor_fn(size, DEVICE, dtype)
     quantiles = [0.5, 0.2, 0.8]
     if provider == "triton":
@@ -40,5 +41,15 @@ def run_bench(fn_triton, fn_torch, create_tensor_fn, dtype, plot_name):
     }
 
     benchmark.benchmarks.plot_name = plot_name
+    benchmark.benchmarks.x_vals = [
+        [10, 10, 10],
+        [10, 8, 10],
+        [1000, 8, 10],
+        [128, 32, 256],
+        [1000, 8, 10000],
+        [1000, 8000, 1000],
+        [512, 512, 512],
+        [1024, 1024, 1024],
+    ]
 
     benchmark.run(print_data=True)

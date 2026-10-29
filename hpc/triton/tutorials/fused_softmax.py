@@ -7,8 +7,6 @@ import triton.language as tl
 
 from benchmark.benchmark import run_bench
 
-DEVICE = triton.runtime.driver.active.get_active_torch_device()
-
 @triton.jit
 def softmax_kernel(x_ptr, o_ptr, size, BLOCK_SIZE:tl.constexpr):
     pid = tl.program_id(0)
